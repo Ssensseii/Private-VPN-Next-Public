@@ -107,6 +107,7 @@ func runApp() error {
 		return err
 	}
 	a := &app{exeDir: filepath.Dir(exe), settings: LoadSettings(), state: "off"}
+	if updateLockExists() { a.updating = true; a.updateProgress = 100; a.updateStage = "Установка обновления — дождитесь завершения мастера" }
 	coreExe := filepath.Join(a.exeDir, "core", "sing-box.exe")
 	a.core = NewCore(filepath.Join(a.exeDir, "core"), a.addLog, a.coreDied)
 	defer a.core.Close()
@@ -222,6 +223,7 @@ func (a *app) snapshot() uiState {
 	logs := append([]string(nil), a.logs...)
 	toast := a.toast
 	a.toast = nil
+	if updateLockExists() { a.updating = true; if a.updateProgress < 100 { a.updateProgress = 100 }; a.updateStage = "Установка обновления — дождитесь завершения мастера" } else if a.updateStage == "Установка обновления — дождитесь завершения мастера" { a.updating = false; a.updateProgress = 0; a.updateStage = "" }
 	return uiState{State:a.state,Stopping:a.stopping,Since:a.since,IP:a.ip,Latency:a.latency,RTT:a.rtt,Pinging:a.pinging,Step:a.step,Updating:a.updating,UpdateProgress:a.updateProgress,UpdateStage:a.updateStage,Settings:a.settings,Log:logs,Toast:toast}
 }
 
@@ -251,7 +253,7 @@ func (a *app) toggle() {
 	a.reconcileCoreState()
 	coreRunning := a.core != nil && a.core.Running()
 	a.mu.Lock()
-	if a.updating { a.mu.Unlock(); a.setToast("Обновление выполняется","Нельзя включить VPN-туннель во время обновления.",false); return }
+	if a.updating || updateLockExists() { a.updating = true; a.mu.Unlock(); a.setToast("Обновление выполняется","Нельзя включить VPN-туннель во время установки обновления.",false); return }
 	if a.state == "connecting" { a.mu.Unlock(); return }
 	if a.state == "on" || coreRunning {
 		a.state = "connecting"
@@ -584,7 +586,7 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 		a.mu.Lock()
 		active := a.state != "off" || (a.core != nil && a.core.Running())
 		if active { a.mu.Unlock(); writeJSON(w,map[string]string{"error":"Перед установкой обновления отключите VPN-туннель."}); return }
-		if a.updating { a.mu.Unlock(); writeJSON(w,map[string]string{"error":"Обновление уже выполняется."}); return }
+		if a.updating || updateLockExists() { a.mu.Unlock(); writeJSON(w,map[string]string{"error":"Обновление уже выполняется."}); return }
 		a.updating=true; a.updateProgress=0; a.updateStage="Подготовка загрузки"
 		a.mu.Unlock()
 		ctx,cancel:=context.WithTimeout(r.Context(),3*time.Minute);defer cancel()
@@ -595,8 +597,8 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 		if err==nil{a.mu.Lock();a.updateProgress=100;a.updateStage="Проверка и подготовка установки";a.mu.Unlock();err=prepareRollback(a.exeDir,appVersion)}
 		if err==nil{err=launchUpdateAfterExit(installer,a.exeDir)}
 		if err!=nil{a.mu.Lock();a.updating=false;a.updateProgress=0;a.updateStage="";a.mu.Unlock();writeJSON(w,map[string]string{"error":err.Error()});return}
-		a.mu.Lock();a.updateStage="Установка обновления";a.mu.Unlock()
-		writeJSON(w,map[string]any{"ok":true,"version":strings.TrimPrefix(rel.TagName,"v"),"message":"Установщик запущен. Приложение закроется для завершения обновления."})
+		a.mu.Lock();a.updateStage="Запущен мастер установки";a.updateProgress=100;a.mu.Unlock()
+		writeJSON(w,map[string]any{"ok":true,"version":strings.TrimPrefix(rel.TagName,"v"),"message":"Открыт мастер установки. Следите за прогрессом и оставшимся временем в его окне."})
 		go func(){time.Sleep(1500*time.Millisecond);a.quit()}()
 	case "rollback":
 		a.mu.Lock()
