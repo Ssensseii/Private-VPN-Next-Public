@@ -804,7 +804,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
       <div class="status-sub" id="sub">Сначала настройте прокси-сервер</div>
       <div class="hero-actions">
        <button class="primary-button" id="connectBtn" onclick="toggle()">Подключить</button>
-       <button class="secondary-button" id="pingBtn" onclick="ping()">Измерить пинг · 10 сек</button>
+       <button class="secondary-button" id="pingBtn" onclick="ping()">Измерить пинг</button>
       </div>
      </div>
      <div class="card connection-card">
@@ -917,7 +917,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
      <div class="card metric-card"><div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div><div class="metric-name">Внешний IP</div><div class="metric-value" id="diagIP">—</div><div class="metric-desc">Информационный запрос</div></div>
     </div>
     <div class="card chart-card">
-     <div class="chart-header"><b>История проверок</b><span>Результаты в текущем запуске приложения</span></div>
+     <div class="chart-header"><b>История проверок</b><span>История сохраняется между запусками приложения</span></div>
      <div class="chart-wrap" id="probeChart"><div class="chart-empty">Пока нет измерений</div></div>
      <div class="probe-footer"><div class="probe-result"><i class="result-dot" id="probeDot"></i><span id="probeText">Ожидание проверки</span></div><span class="card-note" id="probeCount">0 измерений</span></div>
     </div>
@@ -950,7 +950,8 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
      <div class="toggle-list">
       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div><div class="toggle-copy"><b>Компактный режим</b><span>Уменьшает отступы и высоту карточек, сохраняя все элементы управления.</span></div><label class="switch"><input id="pref_compact" type="checkbox" onchange="setUIPref('compact',this.checked)"><i></i></label></div>
       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h4l3-8 4 16 3-8h2"/></svg></div><div class="toggle-copy"><b>Анимации интерфейса</b><span>Включите для плавных переходов и эффектов кнопок. Отключите для статичного интерфейса.</span></div><label class="switch"><input id="pref_motion" type="checkbox" onchange="setUIPref('reduceMotion',!this.checked)"><i></i></label></div>
-      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div><div class="toggle-copy"><b>Запоминать последнюю страницу</b><span>При следующем запуске открывает последний использованный раздел.</span></div><label class="switch"><input id="pref_page" type="checkbox" checked onchange="setUIPref('rememberPage',this.checked)"><i></i></label></div>
+      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="toggle-copy"><b>Автоматически измерять пинг</b><span>Проверять задержку каждые 10 секунд во время подключения и сохранять историю для графика.</span></div><label class="switch"><input id="pref_auto_ping" type="checkbox" checked onchange="setUIPref('autoPing',this.checked)"><i></i></label></div>
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div><div class="toggle-copy"><b>Запоминать последнюю страницу</b><span>При следующем запуске открывает последний использованный раздел.</span></div><label class="switch"><input id="pref_page" type="checkbox" checked onchange="setUIPref('rememberPage',this.checked)"><i></i></label></div>
        <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1.5"/><circle cx="18" cy="5" r="1.5"/><circle cx="12" cy="18" r="1.5"/><path d="m6.5 6 10-1M6 7l5 9m7-9-5 10"/></svg></div><div class="toggle-copy"><b>Фоновые частицы и линии</b><span>Ненавязчивая анимированная сеть на фоне приложения. Можно отключить независимо от анимаций интерфейса.</span></div><label class="switch"><input id="pref_particles" type="checkbox" checked onchange="setUIPref('particles',this.checked)"><i></i></label></div>
      </div>
     </div>
@@ -1061,7 +1062,7 @@ if(window.AndroidVPN){
 }
 // Мост к Go: функции привязаны как window.vpn_<имя> и возвращают Promise.
 function api(name,...args){const f=window['vpn_'+name];return f?f(...args):Promise.resolve(null)}
-async function checkForUpdates(){
+async function checkForUpdates(silent=false){
  const el=$('update-status');if(!el)return;
  el.textContent='Проверяю стабильные релизы…';
  $('update-install').style.display='none';$('update-rollback').style.display='inline-flex';$('update-rollback').disabled=true;
@@ -1071,8 +1072,9 @@ async function checkForUpdates(){
   if(!result)throw new Error('Нет ответа от службы обновлений');
   el.textContent=result.available?'Доступна стабильная версия '+result.latestVersion+'. Нажмите «Скачать и установить».':(result.message||'Обновлений нет.');
   $('update-install').style.display=result.available?'inline-flex':'none';
+  if(result.available&&silent)toast('Доступно обновление','Версия '+result.latestVersion+' доступна. Автоматическая установка не выполняется.',true);
   $('update-rollback').style.display='inline-flex';$('update-rollback').disabled=!result.rollbackAvailable;
- }catch(e){el.textContent='Не удалось проверить обновления: '+e.message}
+ }catch(e){el.textContent='Не удалось проверить обновления: '+e.message;if(silent)console.warn('Startup update check failed:',e)}
 }
 async function downloadAndInstallUpdate(){
  window.__updateStartedAt=Date.now();
@@ -1091,7 +1093,7 @@ const $=id=>document.getElementById(id);
 let S=null,form=null,since=0,activePage='home',procs=[],toastTimer=null;
 let previousPinging=false,lastProbeOk=null,lastProbeTime=0,lastSessionSince=0,probeHistory=[];
 let onboardingShown=false,onboardingDismissed=false,wizardType='socks5',logRows=[],currentTheme='';
- let uiPrefs={compact:false,reduceMotion:false,rememberPage:true,particles:true};
+ let uiPrefs={compact:false,reduceMotion:false,rememberPage:true,particles:true,autoPing:true};
  try{const saved=JSON.parse(localStorage.getItem('pvpn-ui-preferences')||'{}');uiPrefs=Object.assign(uiPrefs,saved)}catch(e){}
 const pageInfo={
  home:['Главная','Состояние подключения и быстрые действия'],
@@ -1194,8 +1196,8 @@ function setStatus(st){
  if(st.log){logRows=st.log.slice();if(activePage==='logs')renderLogs()}
  if(st.toast)toast(st.toast.title,st.toast.text,st.toast.ok);
  if(!form)fillForm(s);
- if(st.state==='on'&&st.since&&st.since!==lastSessionSince){lastSessionSince=st.since;lastProbeOk=true;lastProbeTime=Date.now();addProbeSample(st.latency,true);renderProbeHistory()}
- if(previousPinging&&!st.pinging){lastProbeOk=st.rtt>0;lastProbeTime=Date.now();if(st.rtt>0)addProbeSample(st.rtt,true);renderProbeHistory();if(st.rtt<=0){$('probeText').textContent='Последняя проверка завершилась ошибкой';$('probeDot').className='result-dot fail'}}
+ if(Array.isArray(st.pingHistory)){probeHistory=st.pingHistory.slice(-1200).map(x=>({ms:Number(x.ms)||0,ok:!!x.ok,time:Number(x.time)||Date.now()}));if(probeHistory.length){const last=probeHistory[probeHistory.length-1];lastProbeOk=last.ok;lastProbeTime=last.time;}renderProbeHistory();}
+ if(st.state==='on'&&st.since&&st.since!==lastSessionSince){lastSessionSince=st.since;}
  previousPinging=!!st.pinging;
  const displayLatency=st.pinging?0:(lastProbeOk===false?0:(st.rtt>0?st.rtt:st.latency));
  const displayLatencyText=st.pinging?'Проверка…':fmtMs(displayLatency);
@@ -1214,7 +1216,7 @@ function setStatus(st){
  if(!s.host&&!onboardingShown&&!onboardingDismissed){onboardingShown=true;openOnboarding()}
 }
 window.onUpdate=function(st){S=st;setStatus(st)};
-function addProbeSample(ms,ok){if(!(ms>0))return;probeHistory.push({ms:ms,ok:!!ok,time:Date.now()});if(probeHistory.length>12)probeHistory.shift()}
+function addProbeSample(ms,ok){if(!(ms>0))return;probeHistory.push({ms:ms,ok:!!ok,time:Date.now()});if(probeHistory.length>1200)probeHistory.shift()}
 function renderProbeHistory(){
  const el=$('probeChart');$('probeCount').textContent=probeHistory.length+' измерений';
  if(!probeHistory.length){el.innerHTML='<div class="chart-empty">Пока нет измерений</div>';return}
@@ -1485,6 +1487,7 @@ function setUIPref(key,value){
  if(!Object.prototype.hasOwnProperty.call(uiPrefs,key))return;
  uiPrefs[key]=!!value;saveUIPrefs();applyUIPreferences();
  if(key==='rememberPage'&&!value){try{localStorage.removeItem('pvpn-last-page')}catch(e){}}
+ if(key==='autoPing')api('setAutoPing',!!value).catch(e=>toast('Не удалось изменить автоматический пинг',e.message,false));
 }
 function applyUIPreferences(){
  $('app').classList.toggle('compact-ui',!!uiPrefs.compact);
@@ -1493,11 +1496,12 @@ function applyUIPreferences(){
  if($('pref_motion'))$('pref_motion').checked=!uiPrefs.reduceMotion;
  if($('pref_page'))$('pref_page').checked=!!uiPrefs.rememberPage;
   if($('pref_particles'))$('pref_particles').checked=!!uiPrefs.particles;
+  if($('pref_auto_ping'))$('pref_auto_ping').checked=!!uiPrefs.autoPing;
   setParticleBackground(!!uiPrefs.particles);
 }
 applyUIPreferences();
 if(uiPrefs.rememberPage){try{const last=localStorage.getItem('pvpn-last-page');if(last&&pageInfo[last]&&last!=='mini')setPage(last)}catch(e){}}
-api('ready');
+api('ready').then(()=>api('setAutoPing',!!uiPrefs.autoPing)).then(()=>checkForUpdates(true)).catch(e=>console.warn('Startup initialization failed:',e));
 loadProfiles();
 
 </script>
