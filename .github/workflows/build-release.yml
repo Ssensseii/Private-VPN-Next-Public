@@ -3,7 +3,7 @@ name: Build and verify Windows installer
 
 on:
   push:
-    branches: [main, fix/build9-quality, fix/build10-proxy-routing-latency, fix/http-connect-acceleration-and-socks-retry, feat/premium-ui-redesign, fix/premium-ui-colors, fix/premium-gradient-icons-pass2, fix/probe-latency-sync-green-success, fix/tray-state-http-theme-chart, feat/manual-updates-rollback, feat/in-app-update-rollback, feat/profiles-polish-0118, fix/tun-adapter-ui-motion, fix/final-socks5-ui-polish, release/0.1.121]
+    branches: [main, fix/build9-quality, fix/build10-proxy-routing-latency, fix/http-connect-acceleration-and-socks-retry, feat/premium-ui-redesign, fix/premium-ui-colors, fix/premium-gradient-icons-pass2, fix/probe-latency-sync-green-success, fix/tray-state-http-theme-chart, feat/manual-updates-rollback, feat/in-app-update-rollback, feat/profiles-polish-0118, fix/tun-adapter-ui-motion, fix/final-socks5-ui-polish, release/0.1.122-auto-ping-mini-update, release/0.1.122]
     paths:
       - 'source/parts/**'
       - 'source/SHA256SUMS.txt'
@@ -181,7 +181,7 @@ jobs:
           Copy-Item -LiteralPath 'README.md' -Destination 'dist/README.txt' -Force
           Copy-Item -LiteralPath 'THIRD_PARTY_NOTICES.md' -Destination 'dist/THIRD_PARTY_NOTICES.txt' -Force
           Push-Location 'source/unpacked/src'
-          go build -trimpath -ldflags="-s -w -H windowsgui -X main.appVersion=0.1.121" -o '../../../dist/PrivateVPN-Next.exe' .
+          go build -trimpath -ldflags="-s -w -H windowsgui -X main.appVersion=0.1.122" -o '../../../dist/PrivateVPN-Next.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Windows amd64 build failed' }
           Pop-Location
           New-Item -ItemType Directory -Force -Path 'release' | Out-Null
@@ -189,7 +189,7 @@ jobs:
       - name: Build Inno Setup installer
         shell: pwsh
         env:
-          APP_VERSION: 0.1.121
+          APP_VERSION: 0.1.122
         run: |
           choco install innosetup --yes --no-progress
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
@@ -213,7 +213,7 @@ jobs:
           retention-days: 30
 
   publish-release:
-    name: Publish stable 0.1.121 release
+    name: Publish stable 0.1.122 release
     needs: build-windows
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -240,9 +240,9 @@ jobs:
       - name: Publish GitHub Release with direct installer asset
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.121
+          tag_name: v0.1.122
           target_commitish: ${{ github.sha }}
-          name: PrivateVPN Next 0.1.121
+          name: PrivateVPN Next 0.1.122
           prerelease: false
           make_latest: true
           fail_on_unmatched_files: true
@@ -251,7 +251,7 @@ jobs:
             release/PrivateVPN-Next-portable.zip
             release/SHA256SUMS.txt
           body: |
-            PrivateVPN Next 0.1.121 for Windows x64.
+            PrivateVPN Next 0.1.122 for Windows x64.
 
             The stable release includes the direct Setup.exe installer required by
             the in-app updater, the portable ZIP package, and SHA-256 checksums.
