@@ -33,6 +33,9 @@ type toastState struct {
 	OK    bool   `json:"ok"`
 }
 type uiState struct {
+	Updating bool `json:"updating"`
+	UpdateProgress int `json:"updateProgress"`
+	UpdateStage string `json:"updateStage"`
 	Update    *updateInfo `json:"update,omitempty"`
 	State     string      `json:"state"`
 	Stopping  bool        `json:"stopping"`
@@ -76,6 +79,9 @@ type app struct {
 	latency     int64
 	rtt         int64
 	pinging     bool
+	updating bool
+	updateProgress int
+	updateStage string
 	logs        []string
 	toast       *toastState
 	quitting    bool
@@ -216,7 +222,7 @@ func (a *app) snapshot() uiState {
 	logs := append([]string(nil), a.logs...)
 	toast := a.toast
 	a.toast = nil
-	return uiState{State: a.state, Stopping: a.stopping, Since: a.since, IP: a.ip, Latency: a.latency, RTT: a.rtt, Pinging: a.pinging, Step: a.step, Settings: a.settings, Log: logs, Toast: toast}
+	return uiState{State:a.state,Stopping:a.stopping,Since:a.since,IP:a.ip,Latency:a.latency,RTT:a.rtt,Pinging:a.pinging,Step:a.step,Updating:a.updating,UpdateProgress:a.updateProgress,UpdateStage:a.updateStage,Settings:a.settings,Log:logs,Toast:toast}
 }
 
 func isExistingTunInterfaceError(err error) bool {
@@ -245,10 +251,8 @@ func (a *app) toggle() {
 	a.reconcileCoreState()
 	coreRunning := a.core != nil && a.core.Running()
 	a.mu.Lock()
-	if a.state == "connecting" {
-		a.mu.Unlock()
-		return
-	}
+	if a.updating { a.mu.Unlock(); a.setToast("Обновление выполняется","Нельзя включить VPN-туннель во время обновления.",false); return }
+	if a.state == "connecting" { a.mu.Unlock(); return }
 	if a.state == "on" || coreRunning {
 		a.state = "connecting"
 		a.stopping = true
@@ -533,6 +537,7 @@ window.vpn_saveProfile=p=>vpnCall('saveProfile',[p]);
 window.vpn_selectProfile=id=>vpnCall('selectProfile',[id]);
 window.vpn_deleteProfile=id=>vpnCall('deleteProfile',[id]);
 window.vpn_toggle=()=>vpnCall('toggle');
+window.vpn_showMini=()=>vpnCall('showMini');
 window.vpn_ping=()=>vpnCall('ping');
 window.vpn_saveSettings=s=>vpnCall('saveSettings',[s]);
 window.vpn_saveTheme=theme=>vpnCall('saveTheme',[theme]);
@@ -578,19 +583,21 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 	case "downloadUpdate":
 		a.mu.Lock()
 		active := a.state != "off" || (a.core != nil && a.core.Running())
+		if active { a.mu.Unlock(); writeJSON(w,map[string]string{"error":"Перед установкой обновления отключите VPN-туннель."}); return }
+		if a.updating { a.mu.Unlock(); writeJSON(w,map[string]string{"error":"Обновление уже выполняется."}); return }
+		a.updating=true; a.updateProgress=0; a.updateStage="Подготовка загрузки"
 		a.mu.Unlock()
-		if active { writeJSON(w, map[string]string{"error":"Перед установкой обновления отключите VPN-туннель."}); return }
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
-		rel, err := latestStableRelease(ctx)
-		if err != nil { cancel(); writeJSON(w, map[string]string{"error":err.Error()}); return }
-		if compareSemver(strings.TrimPrefix(rel.TagName,"v"), appVersion) <= 0 { cancel(); writeJSON(w, map[string]string{"error":"Новая стабильная версия не найдена."}); return }
-		installer, err := downloadVerifiedInstaller(ctx, rel)
-		cancel()
-		if err != nil { writeJSON(w, map[string]string{"error":err.Error()}); return }
-		if err = prepareRollback(a.exeDir, appVersion); err != nil { writeJSON(w, map[string]string{"error":err.Error()}); return }
-		if err = launchUpdateAfterExit(installer, a.exeDir); err != nil { writeJSON(w, map[string]string{"error":err.Error()}); return }
-		writeJSON(w, map[string]any{"ok":true,"version":strings.TrimPrefix(rel.TagName,"v"),"message":"Установщик запущен. Приложение закроется для завершения обновления."})
-		go func(){ time.Sleep(1500*time.Millisecond); a.quit() }()
+		ctx,cancel:=context.WithTimeout(r.Context(),3*time.Minute);defer cancel()
+		rel,err:=latestStableRelease(ctx)
+		if err==nil&&compareSemver(strings.TrimPrefix(rel.TagName,"v"),appVersion)<=0{err=errors.New("Новая стабильная версия не найдена.")}
+		var installer string
+		if err==nil{installer,err=downloadVerifiedInstaller(ctx,rel,func(done,total int64){a.mu.Lock();if total>0{a.updateProgress=int(done*100/total)};a.updateStage="Загрузка установщика";a.mu.Unlock()})}
+		if err==nil{a.mu.Lock();a.updateProgress=100;a.updateStage="Проверка и подготовка установки";a.mu.Unlock();err=prepareRollback(a.exeDir,appVersion)}
+		if err==nil{err=launchUpdateAfterExit(installer,a.exeDir)}
+		if err!=nil{a.mu.Lock();a.updating=false;a.updateProgress=0;a.updateStage="";a.mu.Unlock();writeJSON(w,map[string]string{"error":err.Error()});return}
+		a.mu.Lock();a.updateStage="Установка обновления";a.mu.Unlock()
+		writeJSON(w,map[string]any{"ok":true,"version":strings.TrimPrefix(rel.TagName,"v"),"message":"Установщик запущен. Приложение закроется для завершения обновления."})
+		go func(){time.Sleep(1500*time.Millisecond);a.quit()}()
 	case "rollback":
 		a.mu.Lock()
 		active := a.state != "off" || (a.core != nil && a.core.Running())
@@ -599,6 +606,9 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 		if err := launchRollback(); err != nil { writeJSON(w, map[string]string{"error":err.Error()}); return }
 		writeJSON(w, map[string]any{"ok":true,"message":"Восстановление предыдущей версии запущено."})
 		go func(){ time.Sleep(500*time.Millisecond); a.quit() }()
+	case "showMini":
+		if a.hwnd != 0 { pPostMessageW.Call(a.hwnd, uintptr(wmShowMini), 0, 0) }
+		writeJSON(w,nil)
 	case "toggle":
 		a.toggle()
 		writeJSON(w, nil)
