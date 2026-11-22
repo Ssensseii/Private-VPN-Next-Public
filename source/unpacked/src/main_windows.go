@@ -37,6 +37,7 @@ type pingSample struct {
 	OK bool `json:"ok"`
 	Time int64 `json:"time"`
 }
+
 type uiState struct {
 	Updating bool `json:"updating"`
 	UpdateProgress int `json:"updateProgress"`
@@ -88,7 +89,6 @@ type app struct {
 	pinging     bool
 	pingHistory []pingSample
 	autoPingEnabled bool
-	autoPingConfigured bool
 	updating bool
 	updateProgress int
 	updateStage string
@@ -117,6 +117,7 @@ func runApp() error {
 		return err
 	}
 	a := &app{exeDir: filepath.Dir(exe), settings: LoadSettings(), state: "off", autoPingEnabled: true}
+	a.loadPingHistory()
 	if updateLockExists() { a.updating = true; a.updateProgress = 100; a.updateStage = "Установка обновления — дождитесь завершения мастера" }
 	coreExe := filepath.Join(a.exeDir, "core", "sing-box.exe")
 	a.core = NewCore(filepath.Join(a.exeDir, "core"), a.addLog, a.coreDied)
@@ -148,7 +149,6 @@ func runApp() error {
 		return err
 	}
 	defer a.server.Close()
-	a.loadPingHistory()
 	go a.autoPingLoop()
 	return a.runWebView()
 }
@@ -420,10 +420,7 @@ func (a *app) ping() { a.runPing(false) }
 func (a *app) runPing(automatic bool) {
 	a.reconcileCoreState()
 	a.mu.Lock()
-	if a.state != "on" || a.pinging || a.updating || updateLockExists() {
-		a.mu.Unlock()
-		return
-	}
+	if a.state != "on" || a.pinging || a.updating || updateLockExists() { a.mu.Unlock(); return }
 	a.pinging = true
 	a.rtt = 0
 	a.mu.Unlock()
@@ -431,8 +428,7 @@ func (a *app) runPing(automatic bool) {
 		probeSettings, ok := a.core.ProbeSettings()
 		var rtt time.Duration
 		var err error
-		if !ok {
-			err = errors.New("активный маршрут прокси недоступен")
+		if !ok { err = errors.New("активный маршрут прокси недоступен")
 		} else if automatic {
 			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 			rtt, err = measureProxyRTT(ctx, probeSettings, proxyProbeTargets)
@@ -448,20 +444,13 @@ func (a *app) runPing(automatic bool) {
 		a.mu.Unlock()
 		a.recordPingSample(rtt.Milliseconds(), err == nil)
 		if err != nil {
-			if automatic { a.addLog("Автоматическое измерение пинга: "+err.Error())
-			} else {
-				a.addLog("Проверка TCP CONNECT не удалась: "+err.Error())
-				a.setToast("Проверка не удалась", "Прокси не установил удалённое TCP-соединение: "+err.Error(), false)
-			}
+			a.addLog("Автоматическое измерение пинга: "+err.Error())
+			if !automatic { a.setToast("Проверка не удалась", "Прокси не установил удалённое TCP-соединение: "+err.Error(), false) }
 			return
 		}
 		ms := rtt.Milliseconds()
-		if automatic {
-			a.addLog(fmt.Sprintf("Автоматический пинг: %d мс", ms))
-		} else {
-			a.addLog(fmt.Sprintf("Измерение пинга за 10 секунд завершено: медиана %d мс", ms))
-			a.setToast("Измерение завершено", fmt.Sprintf("Пинг за 10 секунд: %d мс", ms), true)
-		}
+		if automatic { a.addLog(fmt.Sprintf("Автоматический пинг: %d мс", ms))
+		} else { a.addLog(fmt.Sprintf("Ручное измерение пинга за 10 секунд завершено: медиана %d мс", ms)); a.setToast("Измерение завершено", fmt.Sprintf("Пинг за 10 секунд: %d мс", ms), true) }
 	}()
 }
 
@@ -471,15 +460,10 @@ func (a *app) autoPingLoop() {
 	var last time.Time
 	for range ticker.C {
 		a.mu.Lock()
-		enabled := a.autoPingConfigured && a.autoPingEnabled
-		connected := a.state == "on"
-		busy := a.pinging || a.updating
+		enabled, connected, busy := a.autoPingEnabled, a.state == "on", a.pinging || a.updating
 		a.mu.Unlock()
 		if !enabled || !connected { last = time.Time{}; continue }
-		if !busy && (last.IsZero() || time.Since(last) >= 10*time.Second) {
-			last = time.Now()
-			a.runPing(true)
-		}
+		if !busy && (last.IsZero() || time.Since(last) >= 10*time.Second) { last = time.Now(); a.runPing(true) }
 	}
 }
 
@@ -602,6 +586,7 @@ func (a *app) bridgeScript() string {
 async function vpnCall(name,args=[]){const r=await fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json','X-PVPN-Token':VPN_TOKEN},body:JSON.stringify(args)});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}
 window.vpn_ready=async()=>{const s=await vpnCall('ready');if(window.onUpdate)window.onUpdate(s);return s};
 window.vpn_checkUpdates=()=>vpnCall('checkUpdates');
+window.vpn_downloadUpdate=()=>vpnCall('downloadUpdate');
 window.vpn_listProfiles=()=>vpnCall('listProfiles');
 window.vpn_saveProfile=p=>vpnCall('saveProfile',[p]);
 window.vpn_selectProfile=id=>vpnCall('selectProfile',[id]);
@@ -689,7 +674,7 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 	case "setAutoPing":
 		var enabled bool
 		if len(args)==0 || json.Unmarshal(args[0], &enabled)!=nil { writeJSON(w, map[string]string{"error":"Не задано состояние автоматического измерения"}); return }
-		a.mu.Lock(); a.autoPingEnabled=enabled; a.autoPingConfigured=true; a.mu.Unlock()
+		a.mu.Lock(); a.autoPingEnabled=enabled; a.mu.Unlock()
 		a.addLog(map[bool]string{true:"Автоматическое измерение пинга включено",false:"Автоматическое измерение пинга отключено"}[enabled])
 		writeJSON(w, map[string]bool{"enabled":enabled})
 	case "saveTheme":
@@ -824,10 +809,16 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 		_ = exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", "https://github.com/Ssensseii/Private-VPN-Next-Public/releases").Start()
 		writeJSON(w, nil)
 	case "restoreWindow":
-		if a.hwnd != 0 {
-			pPostMessageW.Call(a.hwnd, uintptr(wmRestoreMain), 0, 0)
+		if a.hwnd == 0 {
+			writeJSON(w, map[string]string{"error": "Окно приложения ещё не создано."})
+			return
 		}
-		writeJSON(w, nil)
+		posted, _, _ := pPostMessageW.Call(a.hwnd, uintptr(wmRestoreMain), 0, 0)
+		if posted == 0 {
+			writeJSON(w, map[string]string{"error": "Windows не принял команду возврата в основное окно."})
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
 	default:
 		http.NotFound(w, r)
 	}

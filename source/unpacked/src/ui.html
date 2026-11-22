@@ -285,6 +285,22 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .mini-window .mini-back:hover{background:rgba(255,255,255,.09);border-color:var(--accent)}
 .mini-window .mini-window-caption{font-size:11px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
 @media(max-height:620px){.mini-window .content{padding:14px}.mini-window .mini-card{padding:20px}.mini-window .mini-brand{margin-bottom:16px}.mini-window .mini-state{margin-bottom:14px}.mini-window .mini-data{margin-top:14px}.mini-window .mini-data .info-row{padding:8px 0}.mini-window .mini-open{margin-top:14px}}
+/* Mini window: fit the control surface and avoid repaint jitter. */
+.mini-window .content{padding:12px 16px!important;overflow:auto!important;align-items:center!important}
+.mini-window #view-mini{min-height:0!important;max-width:100%!important;animation:none!important;transition:none!important}
+.mini-window .mini-wrap{max-width:460px!important;width:100%!important}
+.mini-window .mini-card{padding:18px 20px!important;border-radius:20px!important;box-shadow:0 12px 30px rgba(0,0,0,.28)!important}
+.mini-window .mini-brand{margin-bottom:14px!important;font-size:14px!important}
+.mini-window .mini-state{gap:12px!important;margin-bottom:14px!important}
+.mini-window .mini-state b{font-size:18px!important}
+.mini-window #miniToggle{min-height:44px!important}
+.mini-window .mini-data{margin-top:14px!important;padding:4px 12px!important}
+.mini-window .mini-data .info-row{padding:8px 0!important}
+.mini-window .mini-open{min-height:40px!important;margin-top:12px!important}
+.mini-window .mini-window-head{gap:8px!important;margin-bottom:10px!important}
+.mini-window .mini-back{padding:8px 10px!important;font-size:11px!important;transition:none!important}
+.mini-window .view.active{animation:none!important;transition:none!important}
+.mini-window *, .mini-window *::before, .mini-window *::after{animation:none!important;scroll-behavior:auto!important}
 .update-progress{height:9px;border-radius:20px;overflow:hidden;background:#17243b;border:1px solid var(--line);margin-top:10px}
 .update-progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c5ce7,#25c997);transition:width .18s ease}
 .update-progress-label{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted);margin-top:6px}
@@ -950,8 +966,8 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
      <div class="toggle-list">
       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div><div class="toggle-copy"><b>Компактный режим</b><span>Уменьшает отступы и высоту карточек, сохраняя все элементы управления.</span></div><label class="switch"><input id="pref_compact" type="checkbox" onchange="setUIPref('compact',this.checked)"><i></i></label></div>
       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h4l3-8 4 16 3-8h2"/></svg></div><div class="toggle-copy"><b>Анимации интерфейса</b><span>Включите для плавных переходов и эффектов кнопок. Отключите для статичного интерфейса.</span></div><label class="switch"><input id="pref_motion" type="checkbox" onchange="setUIPref('reduceMotion',!this.checked)"><i></i></label></div>
-      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="toggle-copy"><b>Автоматически измерять пинг</b><span>Проверять задержку каждые 10 секунд во время подключения и сохранять историю для графика.</span></div><label class="switch"><input id="pref_auto_ping" type="checkbox" checked onchange="setUIPref('autoPing',this.checked)"><i></i></label></div>
-       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div><div class="toggle-copy"><b>Запоминать последнюю страницу</b><span>При следующем запуске открывает последний использованный раздел.</span></div><label class="switch"><input id="pref_page" type="checkbox" checked onchange="setUIPref('rememberPage',this.checked)"><i></i></label></div>
+      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div><div class="toggle-copy"><b>Запоминать последнюю страницу</b><span>При следующем запуске открывает последний использованный раздел.</span></div><label class="switch"><input id="pref_page" type="checkbox" checked onchange="setUIPref('rememberPage',this.checked)"><i></i></label></div>
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="toggle-copy"><b>Автоматически измерять пинг</b><span>Проверять задержку каждые 10 секунд во время подключения и сохранять историю для графика.</span></div><label class="switch"><input id="pref_auto_ping" type="checkbox" checked onchange="setUIPref('autoPing',this.checked)"><i></i></label></div>
        <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1.5"/><circle cx="18" cy="5" r="1.5"/><circle cx="12" cy="18" r="1.5"/><path d="m6.5 6 10-1M6 7l5 9m7-9-5 10"/></svg></div><div class="toggle-copy"><b>Фоновые частицы и линии</b><span>Ненавязчивая анимированная сеть на фоне приложения. Можно отключить независимо от анимаций интерфейса.</span></div><label class="switch"><input id="pref_particles" type="checkbox" checked onchange="setUIPref('particles',this.checked)"><i></i></label></div>
      </div>
     </div>
@@ -996,7 +1012,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
     <div class="mini-wrap">
      <div class="mini-window-head">
       <span class="mini-window-caption">Быстрое управление</span>
-      <button class="mini-back" type="button" onclick="api('restoreWindow')" aria-label="Вернуться в основное окно"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18 9 12l6-6"/><path d="M9 12h11"/></svg> Вернуться в приложение</button>
+      <button class="mini-back" type="button" onclick="restoreMainWindow()" aria-label="Вернуться в основное окно"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18 9 12l6-6"/><path d="M9 12h11"/></svg> Вернуться в приложение</button>
      </div>
      <div class="mini-card">
       <div class="mini-brand"><b>PrivateVPN <span style="color:#a78bfa">Next</span></b><span>Состояние соединения</span></div>
@@ -1008,7 +1024,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
        <div class="info-row"><span>Внешний IP</span><strong id="miniIP">—</strong></div>
        <div class="info-row"><span>Ускорение</span><strong id="miniAccel">Выключено</strong></div>
       </div>
-      <button class="secondary-button mini-open" onclick="api('restoreWindow')">Открыть приложение</button>
+      <button class="secondary-button mini-open" onclick="restoreMainWindow()">Открыть приложение</button>
      </div>
     </div>
    </section>
@@ -1061,7 +1077,8 @@ if(window.AndroidVPN){
  document.documentElement.classList.add('android');
 }
 // Мост к Go: функции привязаны как window.vpn_<имя> и возвращают Promise.
-function api(name,...args){const f=window['vpn_'+name];return f?f(...args):Promise.resolve(null)}
+function api(name,...args){const f=window['vpn_'+name];if(f)return f(...args);if(name==='downloadUpdate'||name==='restoreWindow')return Promise.reject(new Error('Системная команда '+name+' недоступна в этой сборке'));return Promise.resolve(null)}
+async function restoreMainWindow(){try{const r=await api('restoreWindow');if(!r||r.ok!==true)throw new Error((r&&r.error)||'Windows не подтвердил переключение в основное окно')}catch(e){toast('Не удалось открыть основное окно',e.message,false)}}
 async function checkForUpdates(silent=false){
  const el=$('update-status');if(!el)return;
  el.textContent='Проверяю стабильные релизы…';
@@ -1077,10 +1094,10 @@ async function checkForUpdates(silent=false){
  }catch(e){el.textContent='Не удалось проверить обновления: '+e.message;if(silent)console.warn('Startup update check failed:',e)}
 }
 async function downloadAndInstallUpdate(){
- window.__updateStartedAt=Date.now();
  const el=$('update-status');if(!confirm('Скачать проверенный установщик и установить обновление? VPN-туннель должен быть отключён.'))return;
+ window.__updateStartedAt=Date.now();
  $('update-install').disabled=true;$('update-progress-wrap').hidden=false;el.textContent='Загружаю установщик и проверяю SHA-256…';
- try{const r=await api('downloadUpdate');if(r&&r.error)throw new Error(r.error);el.textContent=(r&&r.message)||'Установщик запущен.';}
+ try{const r=await api('downloadUpdate');if(!r||r.ok!==true)throw new Error((r&&r.error)||'Служба обновления не подтвердила запуск установки');el.textContent=r.message||'Установщик запущен.';}
  catch(e){el.textContent='Не удалось установить обновление: '+e.message;$('update-install').disabled=false;$('update-progress-wrap').hidden=true;}
 }
 async function rollbackVersion(){
@@ -1109,7 +1126,7 @@ function setPage(page){
  if(!pageInfo[page])page='home';
  if(page==='mini'&&!document.documentElement.classList.contains('mini-window'))api('showMini');
  activePage=page;
- document.querySelectorAll('.view').forEach(v=>{const active=v.id==='view-'+page;v.classList.toggle('active',active);if(active&&!uiPrefs.reduceMotion){v.style.animation='none';void v.offsetWidth;v.style.animation=''}});
+ document.querySelectorAll('.view').forEach(v=>{const active=v.id==='view-'+page;v.classList.toggle('active',active);if(active&&!uiPrefs.reduceMotion&&!document.documentElement.classList.contains('mini-window')){v.style.animation='none';void v.offsetWidth;v.style.animation=''}});
  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  $('pageTitle').textContent=pageInfo[page][0];$('pageSubtitle').textContent=pageInfo[page][1];
  if(page==='logs')renderLogs();
@@ -1156,6 +1173,7 @@ function applyTheme(theme,persist=true){
 function toast(t,m,ok){$('toastT').textContent=t;$('toastM').textContent=m||'';$('toast').classList.toggle('ok',!!ok);$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),ok?3000:6500)}
 function setStatus(st){
  const app=$('app');
+ if(Array.isArray(st.pingHistory)){probeHistory=st.pingHistory.map(x=>({ms:Number(x.ms)||0,ok:!!x.ok,time:Number(x.time)||Date.now()}));if(probeHistory.length>1200)probeHistory=probeHistory.slice(-1200);if(probeHistory.length){const last=probeHistory[probeHistory.length-1];lastProbeOk=last.ok;lastProbeTime=last.time;}renderProbeHistory();}
  const updateBusy=!!st.updating;
  $('connectBtn').disabled=updateBusy||st.state==='connecting';
  $('miniToggle').disabled=updateBusy||st.state==='connecting';
@@ -1196,7 +1214,6 @@ function setStatus(st){
  if(st.log){logRows=st.log.slice();if(activePage==='logs')renderLogs()}
  if(st.toast)toast(st.toast.title,st.toast.text,st.toast.ok);
  if(!form)fillForm(s);
- if(Array.isArray(st.pingHistory)){probeHistory=st.pingHistory.slice(-1200).map(x=>({ms:Number(x.ms)||0,ok:!!x.ok,time:Number(x.time)||Date.now()}));if(probeHistory.length){const last=probeHistory[probeHistory.length-1];lastProbeOk=last.ok;lastProbeTime=last.time;}renderProbeHistory();}
  if(st.state==='on'&&st.since&&st.since!==lastSessionSince){lastSessionSince=st.since;}
  previousPinging=!!st.pinging;
  const displayLatency=st.pinging?0:(lastProbeOk===false?0:(st.rtt>0?st.rtt:st.latency));
@@ -1216,7 +1233,7 @@ function setStatus(st){
  if(!s.host&&!onboardingShown&&!onboardingDismissed){onboardingShown=true;openOnboarding()}
 }
 window.onUpdate=function(st){S=st;setStatus(st)};
-function addProbeSample(ms,ok){if(!(ms>0))return;probeHistory.push({ms:ms,ok:!!ok,time:Date.now()});if(probeHistory.length>1200)probeHistory.shift()}
+function addProbeSample(ms,ok){if(!(ms>0))return;probeHistory.push({ms:ms,ok:!!ok,time:Date.now()});if(probeHistory.length>12)probeHistory.shift()}
 function renderProbeHistory(){
  const el=$('probeChart');$('probeCount').textContent=probeHistory.length+' измерений';
  if(!probeHistory.length){el.innerHTML='<div class="chart-empty">Пока нет измерений</div>';return}
@@ -1486,8 +1503,8 @@ window.addEventListener('blur',()=>{particlePointer=null});
 function setUIPref(key,value){
  if(!Object.prototype.hasOwnProperty.call(uiPrefs,key))return;
  uiPrefs[key]=!!value;saveUIPrefs();applyUIPreferences();
- if(key==='rememberPage'&&!value){try{localStorage.removeItem('pvpn-last-page')}catch(e){}}
  if(key==='autoPing')api('setAutoPing',!!value).catch(e=>toast('Не удалось изменить автоматический пинг',e.message,false));
+ if(key==='rememberPage'&&!value){try{localStorage.removeItem('pvpn-last-page')}catch(e){}}
 }
 function applyUIPreferences(){
  $('app').classList.toggle('compact-ui',!!uiPrefs.compact);
@@ -1496,13 +1513,14 @@ function applyUIPreferences(){
  if($('pref_motion'))$('pref_motion').checked=!uiPrefs.reduceMotion;
  if($('pref_page'))$('pref_page').checked=!!uiPrefs.rememberPage;
   if($('pref_particles'))$('pref_particles').checked=!!uiPrefs.particles;
-  if($('pref_auto_ping'))$('pref_auto_ping').checked=!!uiPrefs.autoPing;
-  setParticleBackground(!!uiPrefs.particles);
+ if($('pref_auto_ping'))$('pref_auto_ping').checked=!!uiPrefs.autoPing;
+ setParticleBackground(!!uiPrefs.particles);
 }
 applyUIPreferences();
 if(uiPrefs.rememberPage){try{const last=localStorage.getItem('pvpn-last-page');if(last&&pageInfo[last]&&last!=='mini')setPage(last)}catch(e){}}
-api('ready').then(()=>api('setAutoPing',!!uiPrefs.autoPing)).then(()=>checkForUpdates(true)).catch(e=>console.warn('Startup initialization failed:',e));
+api('ready').then(()=>api('setAutoPing',!!uiPrefs.autoPing)).catch(()=>{});
 loadProfiles();
+setTimeout(()=>checkForUpdates(true),900);
 
 </script>
 </body>
