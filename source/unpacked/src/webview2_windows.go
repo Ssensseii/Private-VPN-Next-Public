@@ -233,7 +233,11 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		return r
 	}
 	switch message {
-	case wmSize, wmWindowPosChanged:
+	case wmSize:
+		r, _, _ := pDefWindowProc.Call(hwnd, uintptr(message), wParam, lParam)
+		updateWebViewBounds(a)
+		return r
+	case wmWindowPosChanged:
 		r, _, _ := pDefWindowProc.Call(hwnd, uintptr(message), wParam, lParam)
 		updateWebViewBounds(a)
 		return r
@@ -299,7 +303,8 @@ func (a *app) show() {
 		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 1180, 800, swpNoMove|swpNoZOrder|swpShowWindow)
 		pSetForegroundWindow.Call(a.hwnd)
 		updateWebViewBounds(a)
-		a.executeScript("window.exitMiniPanel&&window.exitMiniPanel();window.vpn_ready&&window.vpn_ready()")
+		pUpdateWindow.Call(a.hwnd)
+		a.executeScript("requestAnimationFrame(()=>requestAnimationFrame(()=>{window.exitMiniPanel&&window.exitMiniPanel();window.vpn_ready&&window.vpn_ready();window.dispatchEvent(new Event('resize'))}))")
 	}
 }
 
