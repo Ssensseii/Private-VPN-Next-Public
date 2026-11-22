@@ -305,7 +305,7 @@ func (a *app) showMini() {
 	a.reconcileCoreState()
 	if a.hwnd != 0 {
 		pShowWindow.Call(a.hwnd, swShow)
-		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 560, 620, swpNoMove|swpNoZOrder|swpShowWindow)
+		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 620, 680, swpNoMove|swpNoZOrder|swpShowWindow)
 		pSetForegroundWindow.Call(a.hwnd)
 		updateWebViewBounds(a)
 		a.executeScript("window.openMiniPanel&&window.openMiniPanel();window.vpn_ready&&window.vpn_ready()")
