@@ -1,0 +1,20 @@
+Сборка PrivateVPN Next (Windows x64).
+
+Текущий исходный код находится в source/unpacked/src. Для полной сборки из корня репозитория:
+
+  go test -race ./source/unpacked/src/...
+  powershell -ExecutionPolicy Bypass -File installer/MakeIcon.ps1 -OutputPath dist/app.ico
+  go install github.com/tc-hib/go-winres@c4d55a3dfc2e22a4a9fb95ae0280ce106daadce9
+  cd source/unpacked/src
+  go-winres simply --arch amd64 --icon ../../../dist/app.ico --manifest gui --admin --file-description "PrivateVPN Next" --product-name "PrivateVPN Next" --original-filename "PrivateVPN-Next.exe"
+  go build -trimpath -ldflags="-s -w -H windowsgui" -o ../../../dist/PrivateVPN-Next.exe .
+
+После сборки рядом с EXE должны находиться WebView2Loader.dll, app.ico,
+PrivateVPN-Next.exe.manifest и папка core с sing-box.exe.
+
+installer/MakeIcon.ps1 создаёт фирменный многоразмерный ICO (16–256 px) с
+прозрачными углами, зелёным щитом и синей линией соединения. go-winres встраивает
+иконку и Windows manifest в EXE; app.ico остаётся рядом для трея и ярлыков.
+
+Go 1.23.2+; внешние Go-модули приложения не требуются. go-winres используется
+только на этапе подготовки Windows-ресурсов.

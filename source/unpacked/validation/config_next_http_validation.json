@@ -1,0 +1,93 @@
+{
+  "dns": {
+    "final": "dns-remote",
+    "servers": [
+      {
+        "type": "https",
+        "tag": "dns-remote",
+        "server": "1.1.1.1",
+        "server_port": 443,
+        "path": "/dns-query",
+        "tls": {
+          "enabled": true,
+          "server_name": "cloudflare-dns.com"
+        },
+        "detour": "proxy"
+      },
+      {
+        "type": "udp",
+        "tag": "dns-direct",
+        "server": "77.88.8.8"
+      }
+    ],
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "PrivateVPN-Next",
+      "address": [
+        "172.19.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "mixed"
+    }
+  ],
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "outbounds": [
+    {
+      "type": "http",
+      "tag": "proxy",
+      "server": "proxy.example.net",
+      "server_port": 8080,
+      "username": "proxy-user",
+      "password": "proxy-pass"
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "domain": "proxy.example.net",
+        "port": 8080,
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "203.0.113.10/32"
+        ],
+        "port": 8080,
+        "outbound": "direct"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "network": "udp",
+        "action": "reject"
+      }
+    ],
+    "final": "proxy",
+    "auto_detect_interface": true,
+    "find_process": true,
+    "default_domain_resolver": "dns-direct"
+  }
+}

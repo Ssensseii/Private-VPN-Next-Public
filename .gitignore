@@ -1,0 +1,12 @@
+/dist/
+/release/
+/build/
+*.exe
+*.test.exe
+settings.json
+*.log
+logs/
+.env
+.env.*
+config.local.json
+proxy.local.json

@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PrivateVPN Next</title>
+<style>
+:root{
+ --bg:#0a0f1b;--bg2:#0e1626;--panel:#121d30;--panel2:#18253b;--panel3:#1d2c46;
+ --line:#263754;--line2:#34496d;--text:#edf2fc;--muted:#93a2bc;--dim:#687994;
+ --purple:#8b5cf6;--purple2:#7045df;--blue:#5b8cff;--green:#22c875;--amber:#f4b64c;--red:#f06b73;
+ --radius:18px;--shadow:0 18px 44px rgba(0,0,0,.22)
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);
+ font:14px/1.45 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;user-select:none}
+button,input,textarea,select{font:inherit}
+button{color:inherit;border:0;cursor:pointer}
+input,textarea{color:var(--text);user-select:text}
+button:disabled{opacity:.45;cursor:not-allowed}
+.app{height:100%;position:relative;display:flex;overflow:hidden;background:
+ radial-gradient(1000px 520px at 70% -10%,rgba(75,91,180,.18),transparent 68%),var(--bg)}
+.sidebar{width:224px;flex:none;display:flex;flex-direction:column;padding:22px 14px 16px;
+ background:linear-gradient(180deg,#101a2d 0%,#0d1525 100%);border-right:1px solid rgba(87,111,155,.22)}
+.brand{display:flex;align-items:center;gap:11px;padding:0 10px 25px}
+.brand-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:13px;
+ background:linear-gradient(145deg,#293f69,#172643);border:1px solid #3b5480;box-shadow:0 6px 18px rgba(46,91,176,.2)}
+.brand-name{font-size:16px;font-weight:750;letter-spacing:.1px;white-space:nowrap}
+.brand-name span{color:#a78bfa}
+.brand-caption{font-size:10.5px;color:var(--muted);margin-top:1px;letter-spacing:.35px}
+.nav-label{padding:9px 11px 7px;color:#657590;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.nav{display:flex;flex-direction:column;gap:5px}
+.nav button{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:12px;
+ text-align:left;color:#aab7cd;font-size:13px;font-weight:560;transition:background .18s,color .18s}
+.nav button svg{width:18px;height:18px;flex:none;opacity:.9}
+.nav button:hover{background:rgba(124,151,207,.1);color:#fff}
+.nav button.active{background:linear-gradient(100deg,rgba(132,88,242,.35),rgba(86,91,205,.18));
+ color:#fff;box-shadow:inset 0 0 0 1px rgba(165,139,250,.23)}
+.nav button.active svg{color:#bba6ff}
+.sidebar-spacer{flex:1}
+.side-status{display:flex;align-items:center;gap:9px;margin:14px 8px 0;padding:12px 10px;
+ border-top:1px solid rgba(87,111,155,.2);color:var(--muted);font-size:11.5px}
+.dot{width:8px;height:8px;border-radius:50%;background:#67758d;box-shadow:0 0 0 4px rgba(103,117,141,.12)}
+.dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(34,200,117,.12)}
+.dot.busy{background:var(--amber);box-shadow:0 0 0 4px rgba(244,182,76,.12)}
+.workspace{min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:74px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px;
+ border-bottom:1px solid rgba(87,111,155,.2);background:rgba(10,15,27,.46)}
+.crumb{display:flex;flex-direction:column;gap:1px}
+.crumb h1{font-size:19px;line-height:1.2;margin:0;font-weight:720;letter-spacing:.1px}
+.crumb p{margin:3px 0 0;color:var(--muted);font-size:11.5px}
+.top-actions{display:flex;align-items:center;gap:9px}
+.status-pill{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:99px;
+ background:rgba(103,117,141,.12);border:1px solid rgba(103,117,141,.2);font-size:11.5px;color:#c4cfe1}
+.status-pill.on{color:#a8f1c9;background:rgba(34,200,117,.1);border-color:rgba(34,200,117,.22)}
+.status-pill.busy{color:#f7d69a;background:rgba(244,182,76,.1);border-color:rgba(244,182,76,.22)}
+.icon-action{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--panel);
+ border:1px solid var(--line);color:#aab8d0;transition:.18s}
+.icon-action:hover{background:var(--panel2);color:#fff;border-color:var(--line2)}
+.content{position:relative;isolation:isolate;flex:1;overflow:auto;padding:25px 30px 34px}
+.view{position:relative;z-index:1}
+.view{display:none;max-width:1120px;margin:0 auto}
+.view.active{display:block}
+.page-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+.page-intro h2{font-size:16px;margin:0;font-weight:700}
+.page-intro p{font-size:12px;color:var(--muted);margin:4px 0 0}
+.card{background:linear-gradient(145deg,rgba(22,34,55,.975),rgba(17,27,45,.99));
+ border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px 0}
+.card-title{font-size:13px;font-weight:680}
+.card-note{font-size:11px;color:var(--muted)}
+.card-body{padding:17px 19px 19px}
+.eyebrow{font-size:10px;font-weight:750;letter-spacing:1.1px;color:#9b8bf5;text-transform:uppercase}
+.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:15px}
+.hero-card{min-height:310px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px}
+.power{position:relative;width:116px;height:116px;border-radius:50%;display:grid;place-items:center;
+ background:transparent;margin:4px 0 13px;transition:transform .15s}
+.power:active{transform:scale(.97)}
+.power .halo{position:absolute;inset:-25px;border-radius:50%;opacity:0;
+ background:radial-gradient(circle,rgba(34,200,117,.32),transparent 68%);transition:opacity .4s}
+.power .ring{position:absolute;inset:0;border-radius:50%;padding:3px;
+ background:conic-gradient(from 210deg,#34415d,#202d47,#34415d);transition:.4s}
+.power .ring:after{content:"";position:absolute;inset:3px;border-radius:50%;
+ background:radial-gradient(circle at 50% 32%,#263959,#131e32 72%)}
+.power .spin{position:absolute;inset:-6px;border-radius:50%;opacity:0;border:3px solid transparent;
+ border-top-color:var(--amber);border-right-color:rgba(244,182,76,.35)}
+.power svg{position:relative;z-index:1;width:42px;height:42px;color:#8494b0;transition:color .4s}
+.state-on .power .halo{opacity:1;animation:breathe 3s ease-in-out infinite}
+.state-on .power .ring{background:conic-gradient(from 210deg,#42e28b,#17884f,#42e28b)}
+.state-on .power svg{color:var(--green)}
+.state-connecting .power .spin{opacity:1;animation:spin 1s linear infinite}
+.state-connecting .power svg{color:var(--amber)}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes breathe{50%{transform:scale(1.08);opacity:.72}}
+.status-title{font-size:23px;font-weight:760;letter-spacing:.1px}
+.state-on .status-title{color:#5be49a}
+.state-connecting .status-title{color:#f6c36f}
+.status-sub{margin-top:4px;color:var(--muted);font-size:12px;text-align:center;min-height:18px}
+.primary-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+ padding:11px 22px;border-radius:12px;background:linear-gradient(180deg,#8058ee,#6540d4);
+ box-shadow:0 8px 22px rgba(104,69,214,.28);color:white;font-weight:680;font-size:12.5px;transition:.18s}
+.primary-button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.primary-button:disabled{filter:grayscale(.4);transform:none}
+.secondary-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;
+ border-radius:11px;background:var(--panel2);border:1px solid var(--line);color:#c4cfe1;font-weight:620;font-size:12px}
+.secondary-button:hover{background:var(--panel3);border-color:var(--line2)}
+.ghost-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;
+ border-radius:10px;border:1px solid var(--line);color:#aebbd1;background:rgba(17,27,45,.6);font-size:11.5px;font-weight:620}
+.ghost-button:hover{background:var(--panel2);color:white}
+.hero-actions{display:flex;gap:9px;margin-top:20px}
+.connection-card{padding:19px;display:flex;flex-direction:column;gap:15px}
+.connection-card .server-row{display:flex;align-items:center;gap:12px}
+.server-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+ background:linear-gradient(145deg,#273d67,#1b2a47);color:#a9b8ff;flex:none}
+.server-info{flex:1;min-width:0}
+.server-info strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.server-info span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.type-badge{font-size:10px;font-weight:750;letter-spacing:.4px;padding:5px 8px;border-radius:7px;
+ background:rgba(139,92,246,.16);color:#c6b5ff;border:1px solid rgba(139,92,246,.22)}
+.divider{height:1px;background:rgba(87,111,155,.22)}
+.info-row{display:flex;justify-content:space-between;gap:12px;font-size:11.5px}
+.info-row span{color:var(--muted)}.info-row strong{font-weight:650;text-align:right}
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:15px}
+.stat-card{padding:15px 16px;min-width:0}
+.stat-label{font-size:10px;color:var(--muted);letter-spacing:.65px;text-transform:uppercase;font-weight:650}
+.stat-value{font-size:18px;font-weight:740;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.stat-foot{font-size:10.5px;color:var(--muted);margin-top:3px}
+.good{color:var(--green)!important}.mid{color:var(--amber)!important}.bad{color:var(--red)!important}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:15px}
+.quick-card{padding:16px;display:flex;align-items:center;gap:12px}
+.quick-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;
+ background:rgba(91,140,255,.12);color:#9ab5ff;flex:none}
+.quick-copy{flex:1;min-width:0}
+.quick-copy b{display:block;font-size:12px}
+.quick-copy span{display:block;color:var(--muted);font-size:10.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.switch{position:relative;width:42px;height:24px;flex:none}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch i{position:absolute;inset:0;border-radius:99px;background:#34425c;transition:.2s}
+.switch i:after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:#d4dbea;transition:.2s}
+.switch input:checked+i{background:#218c58}
+.switch input:checked+i:after{transform:translateX(18px);background:white}
+.switch input:disabled+i{opacity:.4}
+.section-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:15px}
+.form-card{padding:20px}
+.section-label{font-size:10px;color:#9d8df6;font-weight:760;letter-spacing:1px;text-transform:uppercase;margin:2px 0 13px}
+.segment{display:grid;grid-template-columns:1fr 1fr;padding:4px;border:1px solid var(--line);border-radius:12px;background:#0e1728}
+.segment button{padding:10px;border-radius:9px;color:var(--muted);font-size:12px;font-weight:680}
+.segment button.active{color:white;background:linear-gradient(100deg,#7048d8,#4d5db8);box-shadow:0 4px 12px rgba(92,75,188,.2)}
+.field{margin-top:13px;min-width:0}
+.field label{display:block;font-size:11px;color:#aab7cc;margin:0 2px 6px}
+.input-wrap{display:flex;align-items:center;min-width:0;border:1px solid var(--line);border-radius:11px;background:#0d1728;transition:.18s}
+.input-wrap:focus-within{border-color:#8064e8;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+.input-wrap input,.input-wrap textarea{width:100%;min-width:0;padding:11px 12px;background:transparent;border:0;outline:0;font-size:12px}
+.input-wrap textarea{resize:vertical;min-height:76px;line-height:1.5}
+.input-wrap button{padding:0 12px;color:var(--muted)}
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) 125px;gap:11px}
+.two-col.equal{grid-template-columns:1fr 1fr}
+.helper{font-size:10.5px;color:var(--dim);line-height:1.5;margin:7px 2px 0}
+.form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:19px}
+.form-actions .primary-button{min-width:150px}
+.lock-banner{display:none;padding:10px 13px;border-radius:11px;background:rgba(244,182,76,.09);
+ border:1px solid rgba(244,182,76,.22);color:#f3d29a;font-size:11px;margin-bottom:13px}
+.locked .lock-banner{display:block}
+.locked .lockable{opacity:.62;pointer-events:none}
+.domain-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+.domain-row .input-wrap{flex:1}
+.app-list{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0d1728}
+.app-empty{padding:17px;color:var(--dim);font-size:11.5px;text-align:center}
+.app-item{display:flex;align-items:center;gap:10px;padding:9px 11px}
+.app-item+.app-item{border-top:1px solid rgba(87,111,155,.16)}
+.app-avatar{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;background:#213354;color:#b7c8ff;font-size:10px;font-weight:800;flex:none}
+.app-detail{flex:1;min-width:0}
+.app-detail b{display:block;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-detail span{display:block;color:var(--dim);font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+.remove{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:#8190aa;background:transparent}
+.remove:hover{color:var(--red);background:rgba(240,107,115,.1)}
+.app-controls{display:flex;gap:8px;margin-top:10px}
+.app-controls button{flex:1}
+.toggle-list{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#0d1728}
+.toggle-row{display:flex;align-items:center;gap:14px;padding:14px 15px}
+.toggle-row+.toggle-row{border-top:1px solid rgba(87,111,155,.18)}
+.toggle-copy{flex:1;min-width:0}
+.toggle-copy b{display:block;font-size:12px;font-weight:650}
+.toggle-copy span{display:block;color:var(--muted);font-size:10.5px;margin-top:3px;line-height:1.4}
+.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.metric-card{padding:17px}
+.metric-card .metric-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(91,140,255,.13);color:#9cb7ff}
+.metric-card .metric-name{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:12px}
+.metric-card .metric-value{font-size:21px;font-weight:750;margin-top:5px;font-variant-numeric:tabular-nums}
+.metric-card .metric-desc{font-size:10px;color:var(--muted);margin-top:4px}
+.chart-card{margin-top:14px;padding:18px}
+.chart-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.chart-header b{font-size:12px}.chart-header span{font-size:10px;color:var(--muted)}
+.chart-wrap{height:150px;margin-top:12px;position:relative}
+.chart-wrap svg{width:100%;height:100%;overflow:visible}
+.chart-gridline{stroke:rgba(125,145,181,.17);stroke-width:1;stroke-dasharray:4 5}
+.chart-line{fill:none;stroke:#9b7cff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.chart-area{fill:url(#chartFill)}
+.chart-empty{display:grid;place-items:center;height:100%;color:var(--dim);font-size:11px}
+.probe-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:9px}
+.probe-result{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.result-dot{width:7px;height:7px;border-radius:50%;background:#687994}
+.result-dot.ok{background:var(--green)}.result-dot.fail{background:var(--red)}
+.log-toolbar{display:flex;align-items:center;gap:9px;margin-bottom:13px}
+.log-search{flex:1;min-width:120px}
+.log-search input{width:100%;padding:10px 12px;border-radius:10px;background:#0d1728;border:1px solid var(--line);outline:0;color:var(--text);font-size:11.5px}
+.log-search input:focus{border-color:#8064e8}
+.log-filter{padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#0d1728;color:#c4cfe1;font-size:11px}
+.log-list{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:480px;background:#0b1423}
+.log-entry{display:grid;grid-template-columns:74px 18px minmax(0,1fr);align-items:start;gap:8px;padding:9px 12px;font:10.5px/1.45 "Cascadia Mono",Consolas,monospace;color:#b8c5d9}
+.log-entry+.log-entry{border-top:1px solid rgba(87,111,155,.12)}
+.log-time{color:#71829f}.log-symbol{font-weight:800;color:#7fa7ff}.log-entry.warn .log-symbol{color:var(--amber)}
+.log-entry.error .log-symbol{color:var(--red)}.log-entry.success .log-symbol{color:var(--green)}
+.log-message{white-space:pre-wrap;word-break:break-word;user-select:text}
+.log-empty{padding:30px;text-align:center;color:var(--dim);font-size:11.5px}
+.mini-wrap{max-width:390px;margin:8px auto}
+.mini-card{padding:22px;border-radius:22px;background:linear-gradient(145deg,#172744,#101a2c);border:1px solid #35496f;box-shadow:0 22px 55px rgba(0,0,0,.3)}
+.mini-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.mini-brand b{font-size:14px}.mini-brand span{font-size:10px;color:var(--muted)}
+.mini-state{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.mini-shield{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:rgba(34,200,117,.12);color:var(--green)}
+.mini-state b{display:block;font-size:16px}.mini-state span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+.mini-card .primary-button{width:100%}
+.mini-data{display:grid;gap:11px;margin-top:20px}
+.mini-data .info-row{font-size:11px}
+.mini-open{width:100%;margin-top:20px}
+.about-grid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:15px}
+.about-brand{padding:25px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.about-mark{width:76px;height:76px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#2d4472,#172744);border:1px solid #496292;box-shadow:0 12px 30px rgba(43,83,156,.2)}
+.about-brand h3{font-size:17px;margin:15px 0 3px}.about-brand p{font-size:10.5px;color:var(--muted);margin:0}
+.about-details{padding:20px}
+.release-card{display:flex;align-items:center;gap:13px;padding:14px;border-radius:13px;background:rgba(34,200,117,.08);border:1px solid rgba(34,200,117,.2);margin-bottom:15px}
+.release-icon{width:37px;height:37px;border-radius:11px;display:grid;place-items:center;background:rgba(34,200,117,.13);color:var(--green)}
+.release-copy{flex:1}.release-copy b{display:block;font-size:12px}.release-copy span{display:block;color:var(--muted);font-size:10.5px;margin-top:3px}
+.detail-list{display:grid;gap:11px;margin-top:14px}
+.detail-list .info-row{font-size:11px}
+.about-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:19px}
+.scrim{position:fixed;inset:0;background:rgba(3,7,14,.7);backdrop-filter:blur(5px);display:none;z-index:20}
+.app.show-procs .scrim{display:block}
+.procs{position:fixed;z-index:21;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);opacity:0;visibility:hidden;
+ width:min(560px,calc(100vw - 40px));max-height:min(660px,calc(100vh - 50px));display:flex;flex-direction:column;
+ border:1px solid var(--line2);border-radius:18px;background:#111c30;box-shadow:0 30px 80px rgba(0,0,0,.5);transition:.2s}
+.app.show-procs .procs{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.procs-head{display:flex;align-items:center;justify-content:space-between;padding:17px 18px 12px}
+.procs-head b{font-size:13px}.procs-search{padding:0 16px 11px}.procs-search input{width:100%;padding:10px 12px;background:#0b1423;border:1px solid var(--line);border-radius:10px;color:var(--text);outline:0}
+.procs-list{overflow:auto;padding:0 9px 12px}
+.procs-list .app-item{border-radius:10px;cursor:pointer}.procs-list .app-item:hover{background:rgba(122,147,194,.1)}
+.procs-list .app-item.added .remove{color:var(--green)}
+.toast{position:fixed;z-index:40;top:17px;right:20px;max-width:390px;padding:13px 16px;border-radius:13px;
+ background:#2a171d;border:1px solid #6b303d;color:#ffdce2;box-shadow:0 15px 40px rgba(0,0,0,.35);
+ opacity:0;transform:translateY(-14px);pointer-events:none;transition:.22s}
+.toast.ok{background:#10271d;border-color:#246344;color:#d4fbe4}
+.toast.show{opacity:1;transform:none}
+.toast b{display:block;font-size:12px;margin-bottom:3px}.toast span{font-size:11px}
+.onboarding{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;
+ background:radial-gradient(ellipse at 50% 0%,rgba(91,89,194,.2),transparent 60%),rgba(7,12,22,.96);backdrop-filter:blur(12px)}
+.onboarding.show{display:flex}
+.wizard{width:min(760px,100%);display:grid;grid-template-columns:220px minmax(0,1fr);overflow:hidden;
+ border-radius:22px;background:#111c30;border:1px solid #34496d;box-shadow:0 30px 90px rgba(0,0,0,.5)}
+.wizard-side{padding:25px 20px;background:linear-gradient(180deg,#1a2a49,#121d32)}
+.wizard-step{display:flex;align-items:center;gap:10px;margin:16px 0;color:#93a2bc;font-size:11px}
+.wizard-step i{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;border:1px solid #455a80;font-style:normal}
+.wizard-step.active{color:white}.wizard-step.active i{background:#754de0;border-color:#9476ee}
+.wizard-main{padding:27px 30px}
+.wizard-main h2{font-size:19px;margin:0 0 6px}.wizard-main>p{font-size:11px;color:var(--muted);margin:0 0 18px}
+.wizard-actions{display:flex;justify-content:space-between;gap:10px;margin-top:21px}
+.wizard-actions .primary-button{min-width:145px}
+.mini-window .sidebar,.mini-window .topbar{display:none}
+.mini-window .content{padding:16px;overflow:auto}
+.mini-window .view{display:none!important}
+.mini-window #view-mini{display:block!important;max-width:100%;margin:0}
+.mini-window .mini-wrap{margin:0 auto}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#30415f;border-radius:8px}
+@media(max-width:980px){
+ .sidebar{width:190px;padding-left:10px;padding-right:10px}
+ .content{padding:20px}
+ .topbar{padding:0 20px}
+ .dashboard-grid{grid-template-columns:1fr}
+ .hero-card{min-height:280px}
+ .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ .sidebar{width:62px;padding:16px 7px}.brand{padding:0 4px 20px}.brand-name,.brand-caption,.nav-label,.nav button span,.side-status span{display:none}
+ .nav button{justify-content:center;padding:12px 5px}.side-status{justify-content:center;margin:12px 0 0;padding:12px 0}
+ .content{padding:15px}.topbar{padding:0 15px}.crumb p{display:none}
+ .section-grid,.about-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}
+ .quick-grid{grid-template-columns:1fr}.log-toolbar{flex-wrap:wrap}.log-search{flex-basis:100%}
+ .wizard{grid-template-columns:1fr}.wizard-side{display:none}.wizard-main{padding:22px}
+}
+
+/* Premium violet art direction — explicit native button reset is important for WebView2 */
+:root{
+ --bg:#080d1b;--bg2:#0c1430;--panel:#121c36;--panel2:#19264a;--panel3:#222f59;
+ --line:#29395f;--line2:#4a5d91;--text:#f3f4ff;--muted:#9baad0;--dim:#7484aa;
+ --purple:#9a70ff;--purple2:#7046e8;--blue:#718bff;--green:#22c875;--amber:#f4b64c;--red:#f06b73;
+ --radius:20px;--shadow:0 18px 48px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.025)
+}
+button{background:transparent;appearance:none;-webkit-appearance:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+ outline:2px solid rgba(164,128,255,.82);outline-offset:2px
+}
+.app{
+ background:
+  radial-gradient(ellipse 900px 560px at 94% 2%,rgba(91,63,203,.22),transparent 68%),
+  radial-gradient(ellipse 760px 560px at 76% 108%,rgba(48,70,169,.18),transparent 70%),
+  radial-gradient(ellipse 560px 420px at 5% 46%,rgba(62,48,151,.11),transparent 72%),
+  linear-gradient(135deg,#080d1b 0%,#0b1125 54%,#090f20 100%)
+}
+.sidebar{
+ background:
+  radial-gradient(ellipse 300px 440px at 0% 0%,rgba(81,75,178,.14),transparent 72%),
+  linear-gradient(180deg,#111a35 0%,#0c1429 100%);
+ border-right:1px solid rgba(111,128,205,.2);
+ box-shadow:12px 0 36px rgba(0,0,0,.13)
+}
+.brand-mark{
+ background:linear-gradient(145deg,#394d91 0%,#292d68 52%,#1b2448 100%);
+ border-color:rgba(160,143,255,.42);
+ box-shadow:0 7px 22px rgba(95,75,210,.25),inset 0 1px 0 rgba(255,255,255,.1)
+}
+.brand-name span{color:#b58aff}
+.nav-label{color:#7888b4}
+.nav button{
+ background:rgba(19,29,57,.62);
+ border:1px solid rgba(102,119,181,.13);
+ color:#aebcdd;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+ transition:background .18s,border-color .18s,color .18s,box-shadow .18s
+}
+.nav button:hover{
+ background:linear-gradient(100deg,rgba(94,81,183,.22),rgba(56,75,145,.18));
+ border-color:rgba(144,128,232,.25);color:#f4f2ff
+}
+.nav button.active{
+ background:linear-gradient(105deg,rgba(125,79,232,.62),rgba(72,83,184,.4));
+ border-color:rgba(173,148,255,.42);
+ color:#fff;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 6px 18px rgba(75,57,176,.17)
+}
+.nav button.active svg{color:#d0bdff}
+.side-status{border-top-color:rgba(111,128,205,.2);color:#9cadd3}
+.topbar{
+ background:linear-gradient(90deg,rgba(12,19,40,.94),rgba(15,21,45,.84));
+ border-bottom-color:rgba(111,128,205,.2)
+}
+.crumb h1{color:#f5f4ff}
+.status-pill{background:rgba(89,101,147,.13);border-color:rgba(126,139,190,.22)}
+.icon-action{
+ background:linear-gradient(145deg,rgba(27,39,75,.92),rgba(17,27,53,.94));
+ border-color:rgba(104,123,188,.3);color:#b7c4e8
+}
+.icon-action:hover{background:#26345f;border-color:rgba(157,136,255,.5)}
+.content{
+ background:
+  radial-gradient(ellipse 900px 540px at 90% 0%,rgba(77,64,172,.075),transparent 72%),
+  radial-gradient(ellipse 760px 520px at 65% 100%,rgba(45,65,153,.06),transparent 72%)
+}
+.page-intro h2{color:#f4f3ff}
+.card{
+ background:linear-gradient(145deg,rgba(25,36,70,.96),rgba(15,24,49,.985));
+ border-color:rgba(91,112,179,.34);
+ box-shadow:0 18px 48px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.035)
+}
+.eyebrow,.section-label{color:#b29aff}
+.hero-card{
+ position:relative;isolation:isolate;overflow:hidden;
+ background:
+  radial-gradient(ellipse 72% 70% at 50% 0%,rgba(119,83,237,.28),transparent 74%),
+  radial-gradient(ellipse 55% 75% at 100% 100%,rgba(55,93,194,.16),transparent 72%),
+  linear-gradient(145deg,#1b2850 0%,#141f3d 54%,#111b34 100%);
+ border-color:rgba(111,130,205,.4)
+}
+.hero-card:before{
+ content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;
+ background:radial-gradient(ellipse 48% 70% at 0% 100%,rgba(115,77,235,.16),transparent 76%)
+}
+.power .ring{
+ background:conic-gradient(from 210deg,#9b7cff 0%,#514b9e 32%,#34436f 58%,#8b70ef 82%,#9b7cff 100%);
+ box-shadow:0 0 28px rgba(128,96,245,.16)
+}
+.power .ring:after{background:radial-gradient(circle at 50% 30%,#293a68 0%,#172342 72%)}
+.power svg{color:#a6b7e2}
+.state-on .power .ring{background:conic-gradient(from 210deg,#42e28b,#17884f,#42e28b)}
+.primary-button{
+ background:linear-gradient(105deg,#9257f5 0%,#7548e6 55%,#5f58dc 100%);
+ box-shadow:0 9px 25px rgba(105,70,218,.34),inset 0 1px 0 rgba(255,255,255,.16)
+}
+.primary-button:hover{filter:brightness(1.12);box-shadow:0 11px 28px rgba(105,70,218,.42)}
+.secondary-button{
+ background:linear-gradient(145deg,rgba(29,43,79,.95),rgba(21,33,62,.96));
+ border-color:rgba(94,114,174,.28);color:#d1daf3
+}
+.secondary-button:hover{background:#27365f;border-color:rgba(142,128,222,.4)}
+.ghost-button{
+ background:linear-gradient(145deg,rgba(21,33,63,.9),rgba(15,26,51,.92));
+ border-color:rgba(89,111,175,.3);color:#b9c8eb
+}
+.ghost-button:hover{background:linear-gradient(145deg,#26365f,#1b2b51);border-color:rgba(151,132,240,.4);color:#fff}
+.server-icon,.about-mark{
+ background:linear-gradient(145deg,#3b4f91,#202d5c 68%,#1a2548);
+ border:1px solid rgba(137,153,225,.28);
+ color:#c2b0ff;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 22px rgba(49,62,137,.2)
+}
+.type-badge{background:rgba(137,99,255,.2);color:#d4c4ff;border-color:rgba(160,130,255,.3)}
+.quick-icon,.metric-card .metric-icon{
+ background:linear-gradient(145deg,rgba(113,91,220,.24),rgba(62,88,164,.2));
+ color:#b9a6ff;border:1px solid rgba(136,121,218,.18)
+}
+.switch i{background:#354366}
+.switch input:checked+i{background:linear-gradient(90deg,#7650e8,#a05cff)}
+.segment{background:#0b142b;border-color:rgba(89,109,175,.34)}
+.segment button{background:transparent}
+.segment button.active{
+ background:linear-gradient(100deg,#8652ef,#5b65db);
+ box-shadow:0 4px 14px rgba(104,78,210,.3),inset 0 1px 0 rgba(255,255,255,.15)
+}
+.input-wrap,.app-list,.toggle-list,.log-search input,.log-filter{
+ background:#0b142b;border-color:rgba(81,103,166,.34)
+}
+.input-wrap:focus-within,.log-search input:focus{border-color:#9a78ff;box-shadow:0 0 0 3px rgba(139,104,245,.14)}
+.field label{color:#b5c2e0}
+.app-avatar{background:linear-gradient(145deg,#2a3d70,#1b2a50);color:#d0c5ff}
+.toggle-list{background:linear-gradient(145deg,rgba(13,23,48,.95),rgba(10,19,40,.98))}
+.chart-line{stroke:#a78aff}
+.log-list{background:#091226;border-color:rgba(81,103,166,.34)}
+.log-filter{color:#d3dcf4}
+.mini-card{
+ background:
+  radial-gradient(ellipse 100% 80% at 100% 0%,rgba(112,80,221,.2),transparent 70%),
+  linear-gradient(145deg,#1c2b53,#101a36);
+ border-color:rgba(111,130,205,.4);
+ box-shadow:0 22px 55px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04)
+}
+.about-mark{
+ background:linear-gradient(145deg,#4b4d9b,#28376b 70%,#1c294e);
+ border-color:rgba(153,137,255,.4)
+}
+.procs{
+ background:linear-gradient(145deg,#19264a,#101a35);
+ border-color:rgba(117,132,205,.4)
+}
+.procs-search input{background:#0b142b;border-color:rgba(81,103,166,.34);color:var(--text)}
+.wizard{
+ background:linear-gradient(145deg,#1a274b,#101a35);
+ border-color:rgba(117,132,205,.4)
+}
+.wizard-side{background:linear-gradient(180deg,#222f5d,#121e3b)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#4b5689,#313f69)}
+
+
+/* Pass 2 — restore the luminous violet/indigo depth of the approved concept */
+.app{
+ background:
+  radial-gradient(ellipse 980px 650px at 100% 0%,rgba(119,68,255,.42),transparent 69%),
+  radial-gradient(ellipse 900px 640px at 84% 105%,rgba(94,57,238,.38),transparent 72%),
+  radial-gradient(ellipse 760px 600px at 0% 56%,rgba(83,54,210,.27),transparent 73%),
+  radial-gradient(ellipse 700px 360px at 52% 0%,rgba(55,66,164,.18),transparent 80%),
+  linear-gradient(135deg,#080b1d 0%,#101333 52%,#090e22 100%)
+}
+.sidebar{
+ background:
+  radial-gradient(ellipse 360px 520px at 0% 0%,rgba(107,76,226,.23),transparent 73%),
+  radial-gradient(ellipse 300px 420px at 100% 75%,rgba(63,72,171,.13),transparent 76%),
+  linear-gradient(180deg,#111a38 0%,#0c142d 100%)
+}
+.topbar{
+ background:linear-gradient(100deg,rgba(14,19,48,.96),rgba(24,22,67,.9),rgba(13,20,47,.94));
+ border-bottom-color:rgba(130,113,222,.26)
+}
+.content{
+ background:
+  radial-gradient(ellipse 820px 580px at 100% 0%,rgba(119,69,255,.25),transparent 72%),
+  radial-gradient(ellipse 760px 600px at 72% 108%,rgba(91,57,222,.3),transparent 72%),
+  radial-gradient(ellipse 680px 500px at 0% 52%,rgba(78,54,196,.19),transparent 73%),
+  radial-gradient(ellipse 640px 380px at 52% 0%,rgba(51,68,164,.12),transparent 78%)
+}
+.card{
+ background:
+  radial-gradient(ellipse 95% 80% at 100% 0%,rgba(101,83,213,.14),transparent 70%),
+  linear-gradient(145deg,rgba(28,39,83,.97),rgba(15,24,52,.985));
+ border-color:rgba(111,126,207,.38);
+ box-shadow:0 18px 48px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.045)
+}
+.hero-card{
+ background:
+  radial-gradient(ellipse 82% 78% at 50% 0%,rgba(144,88,255,.47),transparent 74%),
+  radial-gradient(ellipse 56% 82% at 0% 100%,rgba(115,70,255,.4),transparent 75%),
+  radial-gradient(ellipse 48% 70% at 100% 100%,rgba(57,110,224,.3),transparent 76%),
+  linear-gradient(145deg,#242d68 0%,#192650 54%,#142044 100%);
+ border-color:rgba(143,125,255,.48);
+ box-shadow:0 22px 56px rgba(20,12,68,.3),inset 0 1px 0 rgba(255,255,255,.08)
+}
+.hero-card:before{
+ background:
+  radial-gradient(ellipse 52% 72% at 0% 100%,rgba(146,88,255,.4),transparent 77%),
+  radial-gradient(ellipse 52% 60% at 100% 0%,rgba(106,89,255,.23),transparent 76%)
+}
+.hero-card:after{
+ content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+ background:linear-gradient(125deg,rgba(255,255,255,.055),transparent 34%,transparent 70%,rgba(105,132,255,.07));
+ z-index:-1
+}
+.power .ring{
+ background:conic-gradient(from 210deg,#a98aff 0%,#6552c7 29%,#394c93 54%,#8d70ff 78%,#b28cff 100%);
+ box-shadow:0 0 34px rgba(143,101,255,.38),0 0 72px rgba(105,72,231,.18)
+}
+.power .ring:after{
+ background:radial-gradient(circle at 50% 25%,#304176 0%,#1b2851 65%,#172143 100%)
+}
+.power svg{color:#c0b4ff;text-shadow:0 0 18px rgba(175,143,255,.25)}
+.primary-button{
+ background:linear-gradient(105deg,#a04eff 0%,#8248ed 48%,#6259e8 100%);
+ box-shadow:0 10px 28px rgba(113,67,235,.42),inset 0 1px 0 rgba(255,255,255,.2)
+}
+.primary-button:hover{box-shadow:0 12px 32px rgba(128,73,255,.5)}
+.nav button.active{
+ background:linear-gradient(105deg,rgba(145,77,255,.78),rgba(85,83,214,.56));
+ border-color:rgba(190,157,255,.58);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 7px 22px rgba(89,53,203,.27)
+}
+.brand-mark{
+ background:linear-gradient(145deg,#7548d8 0%,#473a9e 54%,#27356f 100%);
+ border-color:rgba(190,164,255,.5);
+ box-shadow:0 8px 24px rgba(126,75,238,.34),inset 0 1px 0 rgba(255,255,255,.18)
+}
+.connection-card,.stat-card,.quick-card,.metric-card,.form-card,.chart-card,.about-details,.about-brand{
+ background:
+  radial-gradient(ellipse 90% 70% at 100% 0%,rgba(107,83,220,.15),transparent 72%),
+  linear-gradient(145deg,rgba(28,39,81,.97),rgba(15,24,51,.99))
+}
+.stat-card{
+ display:flex;align-items:center;gap:12px;min-height:82px;padding:13px 14px;
+ border-color:rgba(102,121,193,.38)
+}
+.stat-icon,.toggle-icon{
+ width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:11px;
+ color:#c3aaff;
+ background:linear-gradient(145deg,rgba(135,92,245,.32),rgba(67,83,177,.3));
+ border:1px solid rgba(158,132,255,.28);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 6px 18px rgba(82,57,184,.18)
+}
+.stat-icon svg,.toggle-icon svg{width:18px;height:18px}
+.stat-copy{min-width:0;flex:1}
+.stat-copy .stat-value{margin-top:4px;font-size:17px}
+.stat-copy .stat-foot{margin-top:2px}
+.quick-icon,.metric-card .metric-icon,.server-icon,.about-mark{
+ background:linear-gradient(145deg,rgba(143,99,255,.38),rgba(54,76,166,.34));
+ border:1px solid rgba(157,137,255,.32);
+ color:#d0bdff;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 7px 20px rgba(78,56,175,.18)
+}
+.toggle-list{
+ background:linear-gradient(145deg,rgba(12,22,52,.98),rgba(10,18,42,.98));
+ border-color:rgba(105,123,191,.4)
+}
+.toggle-row{gap:12px}
+.toggle-row .toggle-icon{width:34px;height:34px}
+.log-toolbar .ghost-button,.app-controls .ghost-button,.form-card>.ghost-button{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px
+}
+.log-toolbar .ghost-button svg,.app-controls .ghost-button svg,.form-card>.ghost-button svg{
+ width:15px;height:15px;flex:none
+}
+.log-search{position:relative}
+.log-search-icon{
+ position:absolute;left:13px;top:50%;transform:translateY(-50%);
+ width:16px;height:16px;color:#9daee0;pointer-events:none
+}
+.log-search input{padding-left:39px}
+.log-empty{
+ min-height:145px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+ color:#9aaad2
+}
+.empty-icon{
+ width:42px;height:42px;display:grid;place-items:center;border-radius:13px;
+ color:#c7b4ff;background:linear-gradient(145deg,rgba(135,92,245,.3),rgba(61,80,169,.25));
+ border:1px solid rgba(156,133,255,.3);box-shadow:0 8px 24px rgba(88,60,198,.2)
+}
+.empty-icon svg{width:21px;height:21px}
+.release-card{
+ background:linear-gradient(105deg,rgba(31,94,92,.28),rgba(30,59,91,.22));
+ border-color:rgba(62,190,154,.25)
+}
+.mini-card{
+ background:
+  radial-gradient(ellipse 110% 85% at 100% 0%,rgba(117,77,239,.34),transparent 72%),
+  radial-gradient(ellipse 70% 80% at 0% 100%,rgba(56,93,194,.2),transparent 76%),
+  linear-gradient(145deg,#202d61,#111d3e);
+ border-color:rgba(136,127,226,.48)
+}
+
+
+/* Green marks a verified route result and gives the diagnostics page a second accent. */
+#view-diagnostics .metric-card.probe-success,
+#view-diagnostics .chart-card.probe-success{
+ border-color:rgba(34,200,117,.36);
+ box-shadow:0 18px 44px rgba(0,0,0,.22),0 0 24px rgba(34,200,117,.07),inset 0 1px 0 rgba(255,255,255,.045)
+}
+#view-diagnostics .metric-card.probe-success{
+ background:radial-gradient(ellipse 100% 80% at 100% 0%,rgba(34,200,117,.13),transparent 70%),linear-gradient(145deg,rgba(23,50,64,.97),rgba(16,31,54,.99))
+}
+#view-diagnostics .metric-card.probe-success .metric-icon{
+ background:linear-gradient(145deg,rgba(34,200,117,.25),rgba(28,119,85,.19));
+ border:1px solid rgba(34,200,117,.34);color:#7ae8b0
+}
+#view-diagnostics .chart-card.probe-success{
+ background:radial-gradient(ellipse 90% 70% at 100% 0%,rgba(34,200,117,.09),transparent 72%),linear-gradient(145deg,rgba(25,38,75,.97),rgba(15,24,52,.99))
+}
+#view-diagnostics .metric-card.probe-fail,
+#view-diagnostics .chart-card.probe-fail{border-color:rgba(240,107,115,.4)}
+#view-diagnostics .metric-card.probe-fail .metric-icon{
+ background:linear-gradient(145deg,rgba(240,107,115,.2),rgba(125,49,72,.18));
+ border:1px solid rgba(240,107,115,.3);color:#ff9ba1
+}
+
+.profile-editor{display:flex;gap:8px;align-items:center;margin-top:10px}
+.profile-editor .input-wrap{flex:1;min-width:0}
+.profile-editor input{width:100%;min-width:0;padding:10px 11px;background:#0b1423;border:1px solid var(--line);border-radius:10px;outline:0}
+.profile-editor .primary-button{padding:10px 12px;white-space:nowrap;font-size:10.5px}
+.profile-list{display:grid;gap:7px;margin-top:11px;max-height:190px;overflow:auto}
+.profile-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:rgba(10,18,32,.55)}
+.profile-row.active{border-color:rgba(var(--theme-accent-rgb),.55);background:rgba(var(--theme-accent-rgb),.09)}
+.profile-row-main{min-width:0}.profile-row-main b{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-row-main span{display:block;color:var(--muted);font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.profile-row-actions{display:flex;gap:4px}.profile-row-actions button{padding:6px 7px;border:1px solid var(--line);border-radius:7px;background:rgba(30,45,70,.75);font-size:9px}
+.profile-row-actions button:hover{border-color:var(--line2);background:var(--panel3)}
+.profile-row-actions .danger{color:#f18b92}
+@media(max-width:900px){.profile-editor{align-items:stretch;flex-direction:column}.profile-editor .primary-button{width:100%}}
+/* Profile protocol control */
+.profile-protocol-switch{width:142px;flex:none;grid-template-columns:1fr 1fr;padding:3px;border-radius:10px}
+.profile-protocol-switch button{padding:7px 4px;font-size:9px;letter-spacing:.15px;border-radius:7px}
+.profile-protocol-switch button.active{background:linear-gradient(100deg,var(--theme-accent),var(--theme-accent-strong));color:#fff}
+.profile-protocol-switch button:disabled{opacity:.55;cursor:not-allowed}
+
+/* Persistent interface palettes */
+:root{--theme-accent:#8b5cf6;--theme-accent-strong:#7045df;--theme-accent-light:#c6b5ff;--theme-accent-rgb:139,92,246}
+:root[data-theme="ocean"]{--theme-accent:#36a9ed;--theme-accent-strong:#2477c6;--theme-accent-light:#a4ddff;--theme-accent-rgb:54,169,237}
+:root[data-theme="emerald"]{--theme-accent:#20b989;--theme-accent-strong:#12815f;--theme-accent-light:#91f0cf;--theme-accent-rgb:32,185,137}
+:root[data-theme="rose"]{--theme-accent:#e45b9a;--theme-accent-strong:#b93d78;--theme-accent-light:#ffb0d2;--theme-accent-rgb:228,91,154}
+:root[data-theme="amber"]{--theme-accent:#e5a23d;--theme-accent-strong:#b87522;--theme-accent-light:#ffcf86;--theme-accent-rgb:229,162,61}
+:root[data-theme] .app{background:radial-gradient(1000px 560px at 76% -8%,rgba(var(--theme-accent-rgb),.17),transparent 70%),var(--bg)}
+:root[data-theme] .sidebar{background:linear-gradient(180deg,rgba(var(--theme-accent-rgb),.08),transparent 44%),linear-gradient(180deg,#101a2d 0%,#0d1525 100%)}
+:root[data-theme] .brand-mark{background:linear-gradient(145deg,rgba(var(--theme-accent-rgb),.34),rgba(var(--theme-accent-rgb),.12));border-color:rgba(var(--theme-accent-rgb),.42)}
+:root[data-theme] .brand-name span,:root[data-theme] .mini-brand b span{color:var(--theme-accent-light)!important}
+:root[data-theme] .nav button.active{background:linear-gradient(100deg,rgba(var(--theme-accent-rgb),.34),rgba(var(--theme-accent-rgb),.15));box-shadow:inset 0 0 0 1px rgba(var(--theme-accent-rgb),.3)}
+:root[data-theme] .nav button.active svg,:root[data-theme] .eyebrow,:root[data-theme] .section-label{color:var(--theme-accent-light)}
+:root[data-theme] .primary-button{background:linear-gradient(180deg,var(--theme-accent),var(--theme-accent-strong));box-shadow:0 8px 22px rgba(var(--theme-accent-rgb),.27)}
+:root[data-theme] .segment button.active{background:linear-gradient(100deg,var(--theme-accent-strong),var(--theme-accent));box-shadow:0 4px 12px rgba(var(--theme-accent-rgb),.2)}
+:root[data-theme] .type-badge{background:rgba(var(--theme-accent-rgb),.16);color:var(--theme-accent-light);border-color:rgba(var(--theme-accent-rgb),.28)}
+:root[data-theme] .server-icon{background:linear-gradient(145deg,rgba(var(--theme-accent-rgb),.28),rgba(var(--theme-accent-rgb),.1));color:var(--theme-accent-light)}
+:root[data-theme] .quick-icon,:root[data-theme] .metric-card .metric-icon{background:rgba(var(--theme-accent-rgb),.14);color:var(--theme-accent-light)}
+:root[data-theme] .input-wrap:focus-within{border-color:var(--theme-accent);box-shadow:0 0 0 3px rgba(var(--theme-accent-rgb),.13)}
+:root[data-theme] .log-search input:focus{border-color:var(--theme-accent)}
+:root[data-theme] .switch input:checked+i{background:var(--theme-accent-strong)}
+:root[data-theme] #view-home .hero-card{background:radial-gradient(ellipse 90% 80% at 8% 100%,rgba(var(--theme-accent-rgb),.31),transparent 70%),radial-gradient(ellipse 90% 75% at 100% 0%,rgba(var(--theme-accent-rgb),.15),transparent 72%),linear-gradient(145deg,#19264a,#111c36)}
+:root[data-theme] .mini-card{background:radial-gradient(ellipse 100% 80% at 100% 0%,rgba(var(--theme-accent-rgb),.16),transparent 72%),linear-gradient(145deg,#172744,#101a2c);border-color:rgba(var(--theme-accent-rgb),.35)}
+
+/* Theme selector */
+/* Motion polish + restrained ambient network */
+#ambientParticles{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.62}
+.sidebar,.workspace{position:relative;z-index:1}
+.view.active{animation:pageEnter .24s ease-out both}
+.card,.stat-card,.quick-card,.metric-card{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.card:hover,.stat-card:hover,.quick-card:hover,.metric-card:hover{border-color:rgba(var(--theme-accent-rgb),.34)}
+button:not(:disabled){transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+button:not(:disabled):active{transform:translateY(1px) scale(.99)}
+.primary-button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.power:hover{transform:scale(1.035)}
+.switch i,.switch i:after{transition:background-color .22s ease,transform .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes pageEnter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.view.active{animation:none}}
+.theme-card{margin-bottom:14px}
+ .transport-details{margin-top:14px;overflow:hidden}
+ .transport-details summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 19px;cursor:pointer;list-style:none}
+ .transport-details summary::-webkit-details-marker{display:none}
+ .transport-details summary b{display:block;font-size:12px;font-weight:700}
+ .transport-details summary small{display:block;margin-top:3px;color:var(--muted);font-size:10.5px}
+ .transport-details summary i{width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .18s;margin:0 5px 4px}
+ .transport-details[open] summary i{transform:rotate(225deg);margin-top:8px}
+ .transport-body{padding:0 18px 17px}
+ .maintenance-card{margin-top:14px}
+ .maintenance-copy b{display:block;font-size:12px}
+ .maintenance-copy span{display:block;color:var(--muted);font-size:10.5px;margin-top:4px}
+ .maintenance-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+ .compact-ui .content{padding-top:17px;padding-bottom:22px}
+ .compact-ui .page-intro{margin-bottom:12px}
+ .compact-ui .card{border-radius:14px}
+ .compact-ui .form-card{padding:15px}
+ .compact-ui .toggle-row{padding:10px 12px}
+ .compact-ui .stats-grid,.compact-ui .quick-grid{gap:8px;margin-top:10px}
+ .compact-ui .stat-card{padding:11px 12px}
+ .compact-ui .quick-card{padding:11px}
+ .compact-ui .theme-option{padding:8px 10px}
+ .reduce-motion *, .reduce-motion *:before, .reduce-motion *:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+ .segment{position:relative;isolation:isolate;overflow:hidden}
+ .segment:before{content:"";position:absolute;z-index:0;left:4px;top:4px;bottom:4px;width:calc(50% - 4px);border-radius:9px;background:linear-gradient(105deg,var(--theme-accent-strong),var(--theme-accent));box-shadow:0 4px 14px rgba(var(--theme-accent-rgb),.28),inset 0 1px 0 rgba(255,255,255,.16);transform:translateX(0);transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease}
+ .segment.is-http:before{transform:translateX(100%)}
+ .segment button{position:relative;z-index:1;background:transparent!important;transition:color .22s ease,opacity .22s ease}
+ .segment button.active{background:transparent!important;box-shadow:none!important;color:#fff}
+ .segment button:not(.active){color:var(--muted)}
+ .segment button:disabled{opacity:.55}
+.theme-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.theme-option{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-width:0;padding:11px 12px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:650;text-align:left;transition:.18s}
+.theme-option:hover{border-color:var(--line2);color:var(--text)}
+.theme-option.active{border-color:var(--theme-accent);background:rgba(var(--theme-accent-rgb),.11);color:var(--text);box-shadow:0 0 0 1px rgba(var(--theme-accent-rgb),.13)}
+.theme-swatch{width:17px;height:17px;flex:none;border-radius:50%;background:var(--swatch);box-shadow:0 0 0 3px rgba(255,255,255,.07),0 0 12px color-mix(in srgb,var(--swatch) 45%,transparent)}
+
+/* Dynamic latency chart axis and hover readout */
+.chart-wrap{height:210px}
+.chart-axis-label{fill:var(--muted);font:11px "Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+.chart-unit-label{fill:var(--dim);font:10px "Segoe UI",sans-serif}
+.chart-gridline{stroke:rgba(125,145,181,.2);stroke-width:1;stroke-dasharray:4 5}
+.chart-hit{fill:transparent;stroke:transparent;pointer-events:all;cursor:crosshair}
+.chart-hover-line{position:absolute;z-index:2;top:0;width:1px;background:rgba(220,228,245,.4);pointer-events:none}
+.chart-hover-dot{position:absolute;z-index:3;width:11px;height:11px;border-radius:50%;background:var(--theme-accent-light);border:2px solid var(--theme-accent);box-shadow:0 0 0 4px rgba(var(--theme-accent-rgb),.2),0 0 14px rgba(var(--theme-accent-rgb),.55);transform:translate(-50%,-50%);pointer-events:none}
+.chart-tooltip{position:absolute;z-index:4;max-width:180px;padding:6px 9px;border-radius:8px;background:#080e1c;border:1px solid rgba(var(--theme-accent-rgb),.55);box-shadow:0 8px 22px rgba(0,0,0,.35);color:#f4f6ff;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.chart-tooltip[hidden],.chart-hover-dot[hidden],.chart-hover-line[hidden]{display:none}
+/* Complete palette coverage for elements previously using fixed violet colors. */
+:root[data-theme] .primary-button{background:linear-gradient(105deg,var(--theme-accent),var(--theme-accent-strong));box-shadow:0 9px 25px rgba(var(--theme-accent-rgb),.32),inset 0 1px 0 rgba(255,255,255,.16)}
+:root[data-theme] .primary-button:hover{box-shadow:0 11px 28px rgba(var(--theme-accent-rgb),.42)}
+:root[data-theme] .power .ring{background:conic-gradient(from 210deg,var(--theme-accent-light),var(--theme-accent-strong),#34436f,var(--theme-accent),var(--theme-accent-light));box-shadow:0 0 30px rgba(var(--theme-accent-rgb),.3)}
+:root[data-theme] .power .ring:after{background:radial-gradient(circle at 50% 25%,rgba(var(--theme-accent-rgb),.24),#172143 75%)}
+:root[data-theme] .power svg{color:var(--theme-accent-light)}
+:root[data-theme] .hero-card{background:radial-gradient(ellipse 72% 70% at 50% 0%,rgba(var(--theme-accent-rgb),.25),transparent 74%),radial-gradient(ellipse 55% 75% at 100% 100%,rgba(var(--theme-accent-rgb),.16),transparent 72%),linear-gradient(145deg,#1b2850 0%,#141f3d 54%,#111b34 100%);border-color:rgba(var(--theme-accent-rgb),.4)}
+:root[data-theme] .hero-card:before{background:radial-gradient(ellipse 48% 70% at 0% 100%,rgba(var(--theme-accent-rgb),.2),transparent 76%)}
+:root[data-theme] .stat-icon,:root[data-theme] .toggle-icon,:root[data-theme] .empty-icon{color:var(--theme-accent-light);background:linear-gradient(145deg,rgba(var(--theme-accent-rgb),.28),rgba(var(--theme-accent-rgb),.12));border-color:rgba(var(--theme-accent-rgb),.3)}
+:root[data-theme] .about-mark svg path:first-child{fill:var(--theme-accent-light)!important}
+:root[data-theme] .chart-line{stroke:var(--theme-accent)}
+:root[data-theme] .chart-hover-dot{background:var(--theme-accent-light);border-color:var(--theme-accent)}
+:root[data-theme] .chart-tooltip{border-color:rgba(var(--theme-accent-rgb),.6)}
+:root[data-theme] .release-icon{background:rgba(var(--theme-accent-rgb),.15);color:var(--theme-accent-light);border:1px solid rgba(var(--theme-accent-rgb),.25)}
+:root[data-theme] .server-icon,:root[data-theme] .about-mark,:root[data-theme] .quick-icon,:root[data-theme] .metric-card .metric-icon{background:linear-gradient(145deg,rgba(var(--theme-accent-rgb),.3),rgba(var(--theme-accent-rgb),.12));border-color:rgba(var(--theme-accent-rgb),.32);color:var(--theme-accent-light)}
+@media(max-width:760px){.theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-protocol-switch{width:126px}}
+
+</style>
+</head>
+<body>
+<div class="app state-off" id="app">
+ 
+ <aside class="sidebar">
+  <div class="brand">
+   <div class="brand-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 5.6v6.1c0 4.8-3.3 8.7-8 10.1-4.7-1.4-8-5.3-8-10.1V5.6L12 2.5Z" fill="#9d8bff"/><path d="m8.1 12.1 2.5 2.5 5.3-5.4" stroke="#111a2d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+   <div><div class="brand-name">PrivateVPN <span>Next</span></div><div class="brand-caption">SECURE CONNECTION CLIENT</div></div>
+  </div>
+  <div class="nav-label">Рабочая область</div>
+  <nav class="nav">
+   <button class="active" data-page="home" onclick="setPage('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg><span>Главная</span></button>
+   <button data-page="connection" onclick="setPage('connection')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M17 8h1M17 17h1"/></svg><span>Подключение</span></button>
+   <button data-page="routing" onclick="setPage('routing')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H13a3 3 0 0 1 3 3v6.5M6 8.5v5a3 3 0 0 0 3 3h6.5"/></svg><span>Маршрутизация</span></button>
+   <button data-page="diagnostics" onclick="setPage('diagnostics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17v-5M9 17V7M14 17v-8M19 17V4"/><path d="M3 20h18"/></svg><span>Проверка</span></button>
+   <button data-page="logs" onclick="setPage('logs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg><span>Журнал</span></button>
+  </nav>
+  <div class="nav-label">Приложение</div>
+  <nav class="nav">
+   <button data-page="settings" onclick="setPage('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5v.1a2 2 0 1 1-4 0V19a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Параметры</span></button>
+   <button data-page="about" onclick="setPage('about')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7h.01"/></svg><span>О программе</span></button>
+   <button data-page="mini" onclick="setPage('mini')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg><span>Мини-панель</span></button>
+  </nav>
+  <div class="sidebar-spacer"></div>
+  <div class="side-status"><i class="dot" id="sideDot"></i><span id="sideState">Не подключено</span></div>
+ </aside>
+
+ <main class="workspace">
+  <header class="topbar">
+   <div class="crumb"><h1 id="pageTitle">Главная</h1><p id="pageSubtitle">Состояние подключения и быстрые действия</p></div>
+   <div class="top-actions">
+    <div class="status-pill" id="topStatus"><i class="dot" id="topDot"></i><span id="topStatusText">Не подключено</span></div>
+    <button class="icon-action" title="Мини-панель" onclick="setPage('mini')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5"/></svg></button>
+   </div>
+  </header>
+
+  <div class="content">
+    <canvas id="ambientParticles" aria-hidden="true"></canvas>
+   <section class="view active" id="view-home">
+    <div class="page-intro"><div><h2>Панель управления</h2><p>Основные параметры защищённого соединения</p></div></div>
+    <div class="dashboard-grid">
+     <div class="card hero-card">
+      <div class="eyebrow">Состояние защиты</div>
+      <button class="power" id="power" onclick="toggle()" title="Подключить или отключить">
+       <div class="halo"></div><div class="ring"></div><div class="spin"></div>
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+      </button>
+      <div class="status-title" id="status">Не защищено</div>
+      <div class="status-sub" id="sub">Сначала настройте прокси-сервер</div>
+      <div class="hero-actions">
+       <button class="primary-button" id="connectBtn" onclick="toggle()">Подключить</button>
+       <button class="secondary-button" id="pingBtn" onclick="ping()">Проверить</button>
+      </div>
+     </div>
+     <div class="card connection-card">
+      <div class="eyebrow">Активный профиль</div>
+      <div class="server-row">
+       <div class="server-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div>
+       <div class="server-info"><strong id="srv">Сервер не настроен</strong><span id="srvSub">Добавьте адрес прокси</span></div>
+       <div class="segment profile-protocol-switch" id="profileProtocol" role="group" aria-label="Тип прокси">
+        <button type="button" data-v="socks5" onclick="quickProxyType('socks5')" class="active">SOCKS5</button>
+        <button type="button" data-v="http" onclick="quickProxyType('http')">HTTP</button>
+       </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-row"><span>Авторизация</span><strong id="srvAuth">Не задана</strong></div>
+      <div class="info-row"><span>Ускорение</span><strong id="srvAccel">Выключено</strong></div>
+      <div class="info-row"><span>Сайты в обход</span><strong id="srvBypass">0</strong></div>
+      <div class="info-row"><span>Программы в обход</span><strong id="srvApps">0</strong></div>
+      <button class="secondary-button" onclick="setPage('connection')">Изменить профиль</button>
+     </div>
+    </div>
+    <div class="stats-grid">
+     <div class="card stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div><div class="stat-copy"><div class="stat-label">Внешний IP</div><div class="stat-value" id="ip">—</div><div class="stat-foot">Информационная проверка</div></div></div>
+     <div class="card stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="stat-copy"><div class="stat-label">Задержка прокси</div><div class="stat-value" id="lat">—</div><div class="stat-foot">Медиана TCP CONNECT</div></div></div>
+     <div class="card stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="stat-copy"><div class="stat-label">Время сессии</div><div class="stat-value" id="uptime">—</div><div class="stat-foot">Текущая сессия</div></div></div>
+     <div class="card stat-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></svg></div><div class="stat-copy"><div class="stat-label">Ускорение</div><div class="stat-value" id="accelStat">—</div><div class="stat-foot">SOCKS5 / HTTP CONNECT</div></div></div>
+    </div>
+    <div class="quick-grid">
+     <div class="card quick-card"><div class="quick-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="quick-copy"><b>Ускорение соединений</b><span>Предварительно открытые TCP-соединения</span></div><label class="switch"><input id="q_accel" type="checkbox" onchange="quick('accelerate',this.checked)"><i></i></label></div>
+     <div class="card quick-card"><div class="quick-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 20 6v5c0 5-3.2 8.5-8 10-4.8-1.5-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></div><div class="quick-copy"><b>Исключения маршрутизации</b><span id="quickBypass">Не заданы</span></div><button class="ghost-button" onclick="setPage('routing')">Открыть</button></div>
+    </div>
+   </section>
+
+   <section class="view" id="view-connection">
+    <div class="page-intro"><div><h2>Настройки подключения</h2><p>Параметры upstream-прокси и ускорителя</p></div><span class="card-note">Изменения применяются после сохранения</span></div>
+    <div class="lock-banner">Отключите VPN, чтобы изменить параметры подключения.</div>
+    <div class="section-grid lockable">
+     <div class="card form-card">
+      <div class="section-label">Прокси-сервер</div>
+      <div class="segment" id="seg"><button data-v="socks5" onclick="setType('socks5')">SOCKS5</button><button data-v="http" onclick="setType('http')">HTTP CONNECT</button></div>
+      <div class="field"><label>Адрес сервера</label><div class="input-wrap"><input id="f_host" placeholder="proxy.example.com" spellcheck="false" autocomplete="off"></div></div>
+      <div class="field two-col">
+       <div><label>Порт</label><div class="input-wrap"><input id="f_port" inputmode="numeric" placeholder="1080"></div></div>
+       <div><label>Имя пользователя</label><div class="input-wrap"><input id="f_user" placeholder="Необязательно" spellcheck="false" autocomplete="off"></div></div>
+      </div>
+      <div class="field"><label>Пароль</label><div class="input-wrap"><input id="f_pass" type="password" autocomplete="new-password"><button onclick="eye()" title="Показать пароль">Показать</button></div></div>
+      <button class="ghost-button" style="margin-top:13px;width:100%" onclick="pasteLink()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1"/></svg>Вставить ссылку прокси из буфера</button>
+      <div class="helper">Поддерживаются ссылки socks5:// и http://. HTTPS-прокси не поддерживается.</div>
+     </div>
+     <div class="card form-card">
+      <div class="section-label">Ускорение соединений</div>
+      <div class="toggle-list">
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="toggle-copy"><b>Ускоритель TCP</b><span>Локальный SOCKS5 relay и пул предварительно открытых соединений.</span></div><label class="switch"><input id="f_accel" type="checkbox"><i></i></label></div>
+      </div>
+      <div class="section-label" style="margin-top:24px">Сохранённые профили</div>
+      <div class="profile-editor">
+       <div class="input-wrap"><input id="profileName" maxlength="40" placeholder="Название профиля, например Домашний"></div>
+       <button class="secondary-button" onclick="newProfile()">Новый</button><button class="primary-button" id="profileSaveButton" onclick="saveProfile()">Сохранить профиль</button>
+      </div>
+      <div class="helper">До 20 профилей. Пароли хранятся в зашифрованном виде средствами Windows.</div>
+      <div class="profile-list" id="profilesList"><div class="app-empty">Загрузка профилей…</div></div>
+      <div class="divider" style="margin:16px 0"></div>
+      <div class="section-label">Текущие параметры</div>
+      <div class="info-row"><span>Протокол</span><strong id="profileType">SOCKS5</strong></div>
+      <div class="info-row"><span>Сервер</span><strong id="profileHost">Не задан</strong></div>
+      <div class="info-row"><span>Авторизация</span><strong id="profileAuth">Не задана</strong></div>
+      <div class="helper">Для изменения или переключения профиля сначала отключите VPN.</div>
+     </div>
+    </div>
+     <details class="transport-details card lockable">
+      <summary><span><b>Дополнительные параметры транспорта</b><small>Совместимость протоколов и передача UDP</small></span><i></i></summary>
+      <div class="transport-body"><div class="toggle-list">
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 20 6v5c0 5-3.2 8.5-8 10-4.8-1.5-8-5-8-10V6z"/><path d="M8 12h8"/></svg></div><div class="toggle-copy"><b>Отключать QUIC</b><span>Браузеры будут использовать TCP вместо UDP/443. Может повысить совместимость с прокси.</span></div><label class="switch"><input id="f_quic" type="checkbox"><i></i></label></div>
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.5 11 7-4M8.5 13l7 4"/></svg></div><div class="toggle-copy"><b>UDP через SOCKS5</b><span>Передавать UDP через тот же SOCKS5-сервер. Для HTTP CONNECT недоступно.</span></div><label class="switch"><input id="f_udp" type="checkbox"><i></i></label></div>
+      </div><div class="helper">Изменения сохраняются вместе с профилем подключения и вступают в силу при следующем подключении. Для изменения отключите VPN.</div></div>
+     </details>
+   </section>
+
+   <section class="view" id="view-routing">
+    <div class="page-intro"><div><h2>Маршрутизация и исключения</h2><p>Укажите домены и приложения, которые должны идти напрямую</p></div><span class="card-note">Только явные исключения</span></div>
+    <div class="lock-banner">Отключите VPN, чтобы изменить правила маршрутизации.</div>
+    <div class="section-grid lockable">
+     <div class="card form-card">
+      <div class="section-label">Обход доменов</div>
+      <div class="input-wrap"><textarea id="f_bypass" rows="5" placeholder="example.com&#10;site.org&#10;*.service.net" spellcheck="false"></textarea></div>
+      <div class="helper">Домены и их поддомены будут открываться напрямую, без прокси. Разделяйте записи запятыми, точкой с запятой или новой строкой.</div>
+      <div class="divider" style="margin:19px 0"></div>
+      <div class="info-row"><span>Правило</span><strong>Прямое соединение</strong></div>
+      <div class="info-row"><span>Количество доменов</span><strong id="domainCount">0</strong></div>
+     </div>
+     <div class="card form-card">
+      <div class="section-label">Исключённые приложения</div>
+      <div class="app-list" id="bypassApps"><div class="app-empty">Пока нет исключённых приложений</div></div>
+      <div class="app-controls">
+       <button class="ghost-button" onclick="pickApp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9h18"/></svg>Выбрать EXE-файл</button>
+       <button class="ghost-button" onclick="openProcs()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Из запущенных</button>
+      </div>
+      <div class="helper">Выбранные программы будут подключаться напрямую. Для правила используется полный путь к EXE.</div>
+      <div class="divider" style="margin:19px 0"></div>
+      <div class="info-row"><span>Количество приложений</span><strong id="appCount">0</strong></div>
+     </div>
+    </div>
+    <div class="form-actions lockable"><button class="primary-button" onclick="save()">Сохранить правила маршрутизации</button></div>
+   </section>
+
+   <section class="view" id="view-diagnostics">
+    <div class="page-intro"><div><h2>Проверка и производительность</h2><p>Измерения выполняются через выбранный маршрут прокси</p></div><button class="primary-button" id="diagPing" onclick="ping()">Запустить проверку</button></div>
+    <div class="metric-grid">
+     <div class="card metric-card"><div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div class="metric-name">Задержка прокси</div><div class="metric-value" id="diagLatency">—</div><div class="metric-desc">Медиана трёх TCP CONNECT</div></div>
+     <div class="card metric-card"><div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></div><div class="metric-name">TCP CONNECT</div><div class="metric-value" id="diagConnect">Не проверено</div><div class="metric-desc" id="diagConnectDesc">Запустите проверку маршрута</div></div>
+     <div class="card metric-card"><div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div><div class="metric-name">Внешний IP</div><div class="metric-value" id="diagIP">—</div><div class="metric-desc">Информационный запрос</div></div>
+    </div>
+    <div class="card chart-card">
+     <div class="chart-header"><b>История проверок</b><span>Результаты в текущем запуске приложения</span></div>
+     <div class="chart-wrap" id="probeChart"><div class="chart-empty">Пока нет измерений</div></div>
+     <div class="probe-footer"><div class="probe-result"><i class="result-dot" id="probeDot"></i><span id="probeText">Ожидание проверки</span></div><span class="card-note" id="probeCount">0 измерений</span></div>
+    </div>
+    <div class="helper" style="margin-top:12px">Это не ICMP ping. Приложение измеряет время установления TCP CONNECT через фактически выбранный маршрут; локальное подтверждение TUN не считается успешной проверкой.</div>
+   </section>
+
+   <section class="view" id="view-logs">
+    <div class="page-intro"><div><h2>Журнал событий</h2><p>Системные сообщения, состояние ядра и ошибки подключения</p></div><div style="display:flex;gap:8px"><button class="ghost-button" onclick="copyLogs()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"/></svg>Копировать</button><button class="ghost-button" onclick="api('openLogFile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6M8 15h8M8 18h6"/></svg>Открыть файл</button></div></div>
+    <div class="log-toolbar">
+     <div class="log-search"><svg class="log-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="logSearch" placeholder="Поиск по журналу..." oninput="renderLogs()"></div>
+     <select class="log-filter" id="logFilter" onchange="renderLogs()"><option value="all">Все события</option><option value="success">Успешные</option><option value="warn">Предупреждения</option><option value="error">Ошибки</option></select>
+     <button class="ghost-button" onclick="clearLogs()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>Очистить</button>
+    </div>
+    <div class="log-list" id="logList"><div class="log-empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5M9 13h8M9 17h6"/></svg></div>Ожидание событий</div></div>
+   </section>
+
+   <section class="view" id="view-settings">
+    <div class="page-intro"><div><h2>Параметры приложения</h2><p>Внешний вид, поведение интерфейса и обслуживание</p></div></div>
+    <div class="card form-card theme-card">
+     <div class="section-label">Внешний вид</div>
+     <div class="theme-options">
+      <button type="button" class="theme-option active" data-theme="violet" onclick="applyTheme('violet')"><i class="theme-swatch" style="--swatch:#8b5cf6"></i><span>Фиолетовая</span></button>
+      <button type="button" class="theme-option" data-theme="ocean" onclick="applyTheme('ocean')"><i class="theme-swatch" style="--swatch:#36a9ed"></i><span>Океан</span></button>
+      <button type="button" class="theme-option" data-theme="emerald" onclick="applyTheme('emerald')"><i class="theme-swatch" style="--swatch:#20b989"></i><span>Изумрудная</span></button>
+      <button type="button" class="theme-option" data-theme="rose" onclick="applyTheme('rose')"><i class="theme-swatch" style="--swatch:#e45b9a"></i><span>Розовая</span></button>
+      <button type="button" class="theme-option" data-theme="amber" onclick="applyTheme('amber')"><i class="theme-swatch" style="--swatch:#e5a23d"></i><span>Янтарная</span></button>
+     </div>
+     <div class="helper">Цветовая схема применяется сразу и сохраняется для следующих запусков.</div>
+     <div class="divider" style="margin:18px 0"></div><div class="section-label">Поведение интерфейса</div>
+     <div class="toggle-list">
+      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div><div class="toggle-copy"><b>Компактный режим</b><span>Уменьшает отступы и высоту карточек, сохраняя все элементы управления.</span></div><label class="switch"><input id="pref_compact" type="checkbox" onchange="setUIPref('compact',this.checked)"><i></i></label></div>
+      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h4l3-8 4 16 3-8h2"/></svg></div><div class="toggle-copy"><b>Анимации интерфейса</b><span>Включите для плавных переходов и эффектов кнопок. Отключите для статичного интерфейса.</span></div><label class="switch"><input id="pref_motion" type="checkbox" onchange="setUIPref('reduceMotion',!this.checked)"><i></i></label></div>
+      <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></div><div class="toggle-copy"><b>Запоминать последнюю страницу</b><span>При следующем запуске открывает последний использованный раздел.</span></div><label class="switch"><input id="pref_page" type="checkbox" checked onchange="setUIPref('rememberPage',this.checked)"><i></i></label></div>
+       <div class="toggle-row"><div class="toggle-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1.5"/><circle cx="18" cy="5" r="1.5"/><circle cx="12" cy="18" r="1.5"/><path d="m6.5 6 10-1M6 7l5 9m7-9-5 10"/></svg></div><div class="toggle-copy"><b>Фоновые частицы и линии</b><span>Ненавязчивая анимированная сеть на фоне приложения. Можно отключить независимо от анимаций интерфейса.</span></div><label class="switch"><input id="pref_particles" type="checkbox" checked onchange="setUIPref('particles',this.checked)"><i></i></label></div>
+     </div>
+    </div>
+    <div class="card form-card update-card">
+     <div class="section-label">Обновления</div>
+     <div class="maintenance-copy"><b>Стабильные версии</b><span>Проверяются только релизы, опубликованные после ручного подтверждения владельца проекта. Тестовые сборки не предлагаются.</span></div>
+     <div class="maintenance-actions"><button class="secondary-button" onclick="checkForUpdates()">Проверить обновления</button><button id="update-install" class="primary-button" style="display:none" onclick="downloadAndInstallUpdate()">Скачать и установить</button><button id="update-rollback" class="secondary-button" onclick="rollbackVersion()" disabled title="Сначала установите обновление">Откатить обновление</button></div>
+     <div id="update-status" class="helper" aria-live="polite">Проверка выполняется вручную по запросу. Перед установкой или откатом VPN необходимо отключить.</div>
+    </div>
+    <div class="card form-card maintenance-card">
+     <div class="section-label">Диагностика и обслуживание</div>
+     <div class="maintenance-copy"><b>Журнал событий</b><span>Файл журнала хранится локально в папке данных PrivateVPN Next.</span></div>
+     <div class="maintenance-actions"><button class="secondary-button" onclick="api('openLogFile')">Открыть файл журнала</button><button class="secondary-button" onclick="copyLogs()">Копировать содержимое</button><button class="ghost-button" onclick="clearLogs()">Очистить журнал</button></div>
+     <div class="helper">Очистка удаляет текущий файл журнала и его записи в открытом окне приложения.</div>
+    </div>
+   </section>
+
+   <section class="view" id="view-about">
+    <div class="page-intro"><div><h2>О программе</h2><p>Сведения о клиенте и обновлениях</p></div></div>
+    <div class="about-grid">
+     <div class="card about-brand">
+      <div class="about-mark"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 5.6v6.1c0 4.8-3.3 8.7-8 10.1-4.7-1.4-8-5.3-8-10.1V5.6L12 2.5Z" fill="#a58bff"/><path d="m8 12 2.6 2.6 5.4-5.5" stroke="#111a2d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>PrivateVPN Next</h3><p>Windows 10/11 · x64</p>
+      <div class="type-badge" style="margin-top:13px">Версия <span id="appVersion">__APP_VERSION__</span></div>
+     </div>
+     <div class="card about-details">
+      <div class="release-card"><div class="release-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></div><div class="release-copy"><b>Обновления приложения</b><span>Новые сборки публикуются на странице релизов GitHub.</span></div></div>
+      <div class="section-label">Компоненты</div>
+      <div class="detail-list">
+       <div class="info-row"><span>Сетевое ядро</span><strong>sing-box 1.14.4</strong></div>
+       <div class="info-row"><span>Интерфейс</span><strong>WebView2</strong></div>
+       <div class="info-row"><span>Платформа</span><strong>Windows x64</strong></div>
+       <div class="info-row"><span>Конфигурация</span><strong>Локальное хранение</strong></div>
+      </div>
+      <div class="about-actions"><button class="primary-button" onclick="api('openReleases')">Открыть страницу релизов</button><button class="secondary-button" onclick="api('openLogFile')">Открыть журнал</button></div>
+     </div>
+    </div>
+   </section>
+
+   <section class="view" id="view-mini">
+    <div class="mini-wrap">
+     <div class="mini-card">
+      <div class="mini-brand"><b>PrivateVPN <span style="color:#a78bfa">Next</span></b><span>Быстрое управление</span></div>
+      <div class="mini-state"><div class="mini-shield"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2.5 20 5.6v6.1c0 4.8-3.3 8.7-8 10.1-4.7-1.4-8-5.3-8-10.1V5.6L12 2.5Z"/><path d="m8 12 2.6 2.6 5.4-5.5"/></svg></div><div><b id="miniStatus">Не подключено</b><span id="miniServer">Сервер не настроен</span></div></div>
+      <button class="primary-button" id="miniToggle" onclick="toggle()">Подключить</button>
+      <div class="mini-data">
+       <div class="info-row"><span>Тип прокси</span><strong id="miniType">SOCKS5</strong></div>
+       <div class="info-row"><span>Задержка</span><strong id="miniLatency">—</strong></div>
+       <div class="info-row"><span>Внешний IP</span><strong id="miniIP">—</strong></div>
+       <div class="info-row"><span>Ускорение</span><strong id="miniAccel">Выключено</strong></div>
+      </div>
+      <button class="secondary-button mini-open" onclick="api('restoreWindow')">Открыть приложение</button>
+     </div>
+    </div>
+   </section>
+  </div>
+ </main>
+</div>
+
+<div class="scrim" onclick="closeProcs()"></div>
+<div class="procs">
+ <div class="procs-head"><b>Выбор запущенного приложения</b><button class="ghost-button" onclick="closeProcs()">Готово</button></div>
+ <div class="procs-search"><input id="procQ" placeholder="Поиск: chrome, discord, game..." spellcheck="false" oninput="renderProcs()"></div>
+ <div class="procs-list" id="procList"></div>
+</div>
+<div class="toast" id="toast"><b id="toastT"></b><span id="toastM"></span></div>
+
+<div class="onboarding" id="onboarding">
+ <div class="wizard">
+  <div class="wizard-side">
+   <div class="brand" style="padding:0 0 18px"><div class="brand-mark"> <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 5.6v6.1c0 4.8-3.3 8.7-8 10.1-4.7-1.4-8-5.3-8-10.1V5.6L12 2.5Z" fill="#a58bff"/></svg></div><div class="brand-name">PrivateVPN <span>Next</span></div></div>
+   <div class="wizard-step active"><i>1</i><span>Прокси-сервер</span></div>
+   <div class="wizard-step"><i>2</i><span>Авторизация</span></div>
+   <div class="wizard-step"><i>3</i><span>Готово</span></div>
+  </div>
+  <div class="wizard-main">
+   <div class="eyebrow">Первый запуск</div>
+   <h2>Настройте подключение</h2>
+   <p>Укажите параметры вашего прокси-сервера. Остальные настройки можно изменить позже.</p>
+   <div class="segment" id="wSeg"><button data-v="socks5" class="active" onclick="setWizardType('socks5')">SOCKS5</button><button data-v="http" onclick="setWizardType('http')">HTTP</button></div>
+   <div class="field"><label>Адрес сервера</label><div class="input-wrap"><input id="w_host" placeholder="proxy.example.com" spellcheck="false"></div></div>
+   <div class="field two-col">
+    <div><label>Порт</label><div class="input-wrap"><input id="w_port" value="1080" inputmode="numeric"></div></div>
+    <div><label>Имя пользователя</label><div class="input-wrap"><input id="w_user" placeholder="Необязательно"></div></div>
+   </div>
+   <div class="field"><label>Пароль</label><div class="input-wrap"><input id="w_pass" type="password" autocomplete="new-password"></div></div>
+   <div class="toggle-row" style="padding:14px 0"><div class="toggle-copy"><b>Включить ускорение</b><span>Пул предварительно открытых соединений</span></div><label class="switch"><input id="w_accel" type="checkbox"><i></i></label></div>
+   <div class="wizard-actions"><button class="ghost-button" onclick="skipOnboarding()">Позже</button><button class="primary-button" onclick="saveOnboarding()">Сохранить и продолжить →</button></div>
+  </div>
+ </div>
+</div>
+
+<script>
+if(window.AndroidVPN){
+ const A=window.AndroidVPN;
+ window.vpn_ready=async()=>A.ready();
+ window.vpn_toggle=async()=>A.toggle();
+ window.vpn_ping=async()=>A.ping();
+ window.vpn_openLogFile=async()=>A.shareLog();
+ window.vpn_saveSettings=async s=>A.saveSettings(JSON.stringify(s));
+ window.vpn_parseLink=async t=>JSON.parse(A.parseLink(t||''));
+ document.documentElement.classList.add('android');
+}
+// Мост к Go: функции привязаны как window.vpn_<имя> и возвращают Promise.
+function api(name,...args){const f=window['vpn_'+name];return f?f(...args):Promise.resolve(null)}
+async function checkForUpdates(){
+ const el=$('update-status');if(!el)return;
+ el.textContent='Проверяю стабильные релизы…';
+ $('update-install').style.display='none';$('update-rollback').style.display='inline-flex';$('update-rollback').disabled=true;
+ try{
+  const result=await api('checkUpdates');
+  if(result&&result.error)throw new Error(result.error);
+  if(!result)throw new Error('Нет ответа от службы обновлений');
+  el.textContent=result.available?'Доступна стабильная версия '+result.latestVersion+'. Нажмите «Скачать и установить».':(result.message||'Обновлений нет.');
+  $('update-install').style.display=result.available?'inline-flex':'none';
+  $('update-rollback').style.display='inline-flex';$('update-rollback').disabled=!result.rollbackAvailable;
+ }catch(e){el.textContent='Не удалось проверить обновления: '+e.message}
+}
+async function downloadAndInstallUpdate(){
+ const el=$('update-status');if(!confirm('Скачать проверенный установщик и установить обновление? VPN-туннель должен быть отключён.'))return;
+ $('update-install').disabled=true;el.textContent='Загружаю установщик и проверяю SHA-256…';
+ try{const r=await api('downloadUpdate');if(r&&r.error)throw new Error(r.error);el.textContent=(r&&r.message)||'Установщик запущен.';}
+ catch(e){el.textContent='Не удалось установить обновление: '+e.message;$('update-install').disabled=false;}
+}
+async function rollbackVersion(){
+ if(!confirm('Откатить последнее обновление? Будет восстановлена ровно одна предыдущая установленная версия. Приложение закроется.'))return;
+ const el=$('update-status');el.textContent='Запускаю восстановление предыдущей версии…';
+ try{const r=await api('rollback');if(r&&r.error)throw new Error(r.error);el.textContent=(r&&r.message)||'Восстановление запущено.';}
+ catch(e){el.textContent='Не удалось выполнить откат: '+e.message;}
+}
+const $=id=>document.getElementById(id);
+let S=null,form=null,since=0,activePage='home',procs=[],toastTimer=null;
+let previousPinging=false,lastProbeOk=null,lastProbeTime=0,lastSessionSince=0,probeHistory=[];
+let onboardingShown=false,onboardingDismissed=false,wizardType='socks5',logRows=[],currentTheme='';
+ let uiPrefs={compact:false,reduceMotion:false,rememberPage:true,particles:true};
+ try{const saved=JSON.parse(localStorage.getItem('pvpn-ui-preferences')||'{}');uiPrefs=Object.assign(uiPrefs,saved)}catch(e){}
+const pageInfo={
+ home:['Главная','Состояние подключения и быстрые действия'],
+ connection:['Подключение','Параметры upstream-прокси и ускорителя'],
+ routing:['Маршрутизация','Домены и приложения, которые подключаются напрямую'],
+ diagnostics:['Проверка','Измерение реальной задержки через выбранный маршрут'],
+ logs:['Журнал','Системные сообщения и события сетевого ядра'],
+ settings:['Параметры','Внешний вид и поведение приложения'],
+ about:['О программе','Версия клиента и информация об обновлениях'],
+ mini:['Мини-панель','Компактное управление подключением']
+};
+function setPage(page){
+ if(!pageInfo[page])page='home';
+ activePage=page;
+ document.querySelectorAll('.view').forEach(v=>{const active=v.id==='view-'+page;v.classList.toggle('active',active);if(active&&!uiPrefs.reduceMotion){v.style.animation='none';void v.offsetWidth;v.style.animation=''}});
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+ $('pageTitle').textContent=pageInfo[page][0];$('pageSubtitle').textContent=pageInfo[page][1];
+ if(page==='logs')renderLogs();
+ if(page==='diagnostics')renderProbeHistory();
+ if(page==='routing')renderApps();
+ if(uiPrefs.rememberPage){try{localStorage.setItem('pvpn-last-page',page)}catch(e){}}
+}
+window.openMiniPanel=function(){$('app').classList.add('mini-window');setPage('mini')};
+window.exitMiniPanel=function(){$('app').classList.remove('mini-window');setPage('home')};
+function fmtMs(ms){return ms>0?ms+' мс':'—'}
+function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function latClass(ms){return !(ms>0)?'':ms<400?'good':ms<900?'mid':'bad'}
+function esc(t){const d=document.createElement('div');d.textContent=String(t??'');return d.innerHTML}
+function baseName(p){return p.split(/[\\/]/).pop()}
+function applyTheme(theme,persist=true){
+ const allowed=['violet','ocean','emerald','rose','amber'];
+ if(!allowed.includes(theme))theme='violet';
+ const previous=currentTheme||'violet';
+ currentTheme=theme;
+ document.documentElement.dataset.theme=theme;
+ document.querySelectorAll('.theme-option').forEach(button=>{
+  const active=button.dataset.theme===theme;
+  button.classList.toggle('active',active);
+  button.setAttribute('aria-pressed',active?'true':'false');
+ });
+ if(form)form.theme=theme;
+ if(S&&S.settings)S.settings.theme=theme;
+ if(persist){
+  api('saveTheme',theme).then(err=>{
+   if(err){
+    if(form)form.theme=previous;
+    if(S&&S.settings)S.settings.theme=previous;
+    applyTheme(previous,false);
+    toast('Тема не сохранена',err,false);
+   }
+  }).catch(e=>{
+   if(form)form.theme=previous;
+   if(S&&S.settings)S.settings.theme=previous;
+   applyTheme(previous,false);
+   toast('Тема не сохранена',e.message,false);
+  });
+ }
+}
+function toast(t,m,ok){$('toastT').textContent=t;$('toastM').textContent=m||'';$('toast').classList.toggle('ok',!!ok);$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),ok?3000:6500)}
+function setStatus(st){
+ const app=$('app');app.classList.remove('state-off','state-connecting','state-on');app.classList.add('state-'+st.state);
+ app.classList.toggle('locked',st.state!=='off');
+ const on=st.state==='on',busy=st.state==='connecting';
+ $('status').textContent=on?'Подключено':busy?(st.stopping?'Отключение…':'Подключение…'):'Не защищено';
+ $('connectBtn').textContent=on?'Отключить':busy?(st.stopping?'Отключение…':'Подключение…'):'Подключить';
+ $('connectBtn').disabled=busy;$('miniToggle').textContent=on?'Отключить':busy?'Подключение…':'Подключить';$('miniToggle').disabled=busy;
+ $('sub').textContent=on&&st.since?'Подключено '+fmtDur(Math.max(0,Math.floor(Date.now()/1000-st.since))):busy?(st.step||'Подготовка соединения'):(st.settings.host?'Готово к подключению':'Сначала настройте прокси-сервер');
+ $('topStatusText').textContent=on?'Подключено':busy?(st.stopping?'Отключение…':'Подключение…'):'Не подключено';
+ $('sideState').textContent=on?'Подключено':busy?'Выполняется операция':'Не подключено';
+ $('topStatus').classList.toggle('on',on);$('topStatus').classList.toggle('busy',busy);
+ $('topDot').className='dot'+(on?' on':busy?' busy':'');$('sideDot').className='dot'+(on?' on':busy?' busy':'');
+ $('ip').textContent=st.ip||'—';$('diagIP').textContent=st.ip||'—';$('miniIP').textContent=st.ip||'—';
+ $('pingBtn').disabled=!!st.pinging||!on;$('diagPing').disabled=!!st.pinging||!on;
+ since=st.since||0;$('uptime').textContent=on&&since?fmtDur(Math.max(0,Math.floor(Date.now()/1000-since))):'—';
+ const s=st.settings||{};
+ const selectedTheme=s.theme||'violet';
+ if(selectedTheme!==currentTheme)applyTheme(selectedTheme,false);
+ $('srv').textContent=s.host?s.host+':'+s.port:'Сервер не настроен';
+ $('srvSub').textContent=s.host?(s.username?'Вход: '+s.username:'Без авторизации'):'Добавьте адрес прокси';
+ setProfileProtocol(s.proxy_type||'socks5',busy||on||!s.host);
+ $('srvAuth').textContent=s.username?'Настроена':'Не задана';
+ $('srvAccel').textContent=s.accelerate?'Включено':'Выключено';
+ $('srvBypass').textContent=String((s.bypass||'').split(/[\\s,;]+/).filter(Boolean).length);
+ $('srvApps').textContent=String((s.bypass_apps||[]).length);
+ $('accelStat').textContent=s.accelerate?'Включено':'Выключено';$('accelStat').className='stat-value '+(s.accelerate?'good':'');
+ $('q_accel').checked=!!s.accelerate;
+ $('q_accel').disabled=busy||st.state!=='off'||!s.host;
+ $('quickBypass').textContent=(s.bypass||'').trim()?(s.bypass.split(/[\\s,;]+/).filter(Boolean).length+' доменов'):'Не заданы';
+ $('miniStatus').textContent=on?'Подключено':busy?'Подключение…':'Не подключено';
+ $('miniServer').textContent=s.host?s.host+':'+s.port:'Сервер не настроен';
+ $('miniType').textContent=s.proxy_type==='http'?'HTTP':'SOCKS5';$('miniAccel').textContent=s.accelerate?'Включено':'Выключено';
+ $('profileType').textContent=s.proxy_type==='http'?'HTTP CONNECT':'SOCKS5';$('profileHost').textContent=s.host?s.host+':'+s.port:'Не задан';
+ $('profileAuth').textContent=s.username?'Настроена':'Не задана';
+ if(st.log){logRows=st.log.slice();if(activePage==='logs')renderLogs()}
+ if(st.toast)toast(st.toast.title,st.toast.text,st.toast.ok);
+ if(!form)fillForm(s);
+ if(st.state==='on'&&st.since&&st.since!==lastSessionSince){lastSessionSince=st.since;lastProbeOk=true;lastProbeTime=Date.now();addProbeSample(st.latency,true);renderProbeHistory()}
+ if(previousPinging&&!st.pinging){lastProbeOk=st.rtt>0;lastProbeTime=Date.now();if(st.rtt>0)addProbeSample(st.rtt,true);renderProbeHistory();if(st.rtt<=0){$('probeText').textContent='Последняя проверка завершилась ошибкой';$('probeDot').className='result-dot fail'}}
+ previousPinging=!!st.pinging;
+ const displayLatency=st.pinging?0:(lastProbeOk===false?0:(st.rtt>0?st.rtt:st.latency));
+ const displayLatencyText=st.pinging?'Проверка…':fmtMs(displayLatency);
+ $('lat').textContent=displayLatencyText;$('lat').className='stat-value '+latClass(displayLatency);
+ $('diagLatency').textContent=displayLatencyText;$('diagLatency').className='metric-value '+latClass(displayLatency);
+ $('miniLatency').textContent=displayLatencyText;
+ const probeState=st.pinging?'pending':lastProbeOk===true?'success':lastProbeOk===false?'fail':'idle';
+ $('diagLatency').parentElement.classList.toggle('probe-success',probeState==='success');
+ $('diagLatency').parentElement.classList.toggle('probe-fail',probeState==='fail');
+ $('diagConnect').parentElement.classList.toggle('probe-success',probeState==='success');
+ $('diagConnect').parentElement.classList.toggle('probe-fail',probeState==='fail');
+ $('probeChart').parentElement.classList.toggle('probe-success',probeState==='success');
+ $('probeChart').parentElement.classList.toggle('probe-fail',probeState==='fail');
+ if(lastProbeOk!==null){$('diagConnect').textContent=lastProbeOk?'OK':'Ошибка';$('diagConnect').className='metric-value '+(lastProbeOk?'good':'bad');$('diagConnectDesc').textContent=lastProbeOk?'TCP CONNECT подтверждён':'TCP CONNECT не завершён'}
+ else if(st.latency>0){$('diagConnect').textContent='OK';$('diagConnect').className='metric-value good';$('diagConnectDesc').textContent='Подтверждено при подключении';}
+ if(!s.host&&!onboardingShown&&!onboardingDismissed){onboardingShown=true;openOnboarding()}
+}
+window.onUpdate=function(st){S=st;setStatus(st)};
+function addProbeSample(ms,ok){if(!(ms>0))return;probeHistory.push({ms:ms,ok:!!ok,time:Date.now()});if(probeHistory.length>12)probeHistory.shift()}
+function renderProbeHistory(){
+ const el=$('probeChart');$('probeCount').textContent=probeHistory.length+' измерений';
+ if(!probeHistory.length){el.innerHTML='<div class="chart-empty">Пока нет измерений</div>';return}
+ const last=probeHistory[probeHistory.length-1],accent=lastProbeOk===false?'#f06b73':(getComputedStyle(document.documentElement).getPropertyValue('--theme-accent').trim()||'#8b5cf6');
+ const vals=probeHistory.map(x=>x.ms);
+ const maxValue=Math.max(1,...vals);
+ const step=maxValue<=600?100:maxValue<=1200?200:maxValue<=3000?500:1000;
+ const scaleMax=Math.max(step,Math.ceil(maxValue/step)*step);
+ const W=900,H=210,left=62,right=18,top=17,bottom=30;
+ const plotW=W-left-right,plotH=H-top-bottom;
+ const xFor=i=>left+(vals.length===1?plotW/2:i*plotW/(vals.length-1));
+ const yFor=v=>top+plotH-(v/scaleMax)*plotH;
+ const points=vals.map((v,i)=>({x:xFor(i),y:yFor(v),value:v}));
+ const pointList=points.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+ const area=pointList+' '+points[points.length-1].x.toFixed(1)+','+(top+plotH)+' '+points[0].x.toFixed(1)+','+(top+plotH);
+ let grid='',labels='';
+ for(let tick=0;tick<=scaleMax;tick+=step){
+  const y=yFor(tick);
+  grid+='<line class="chart-gridline" x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(W-right)+'" y2="'+y.toFixed(1)+'"/>';
+  labels+='<text class="chart-axis-label" x="'+(left-12)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end">'+tick+'</text>';
+ }
+ const hits=points.map((p,i)=>'<circle class="chart-hit" data-index="'+i+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="13"/>').join('');
+ el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="График задержки в миллисекундах"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="'+accent+'" stop-opacity=".28"/><stop offset="1" stop-color="'+accent+'" stop-opacity="0"/></linearGradient></defs><text class="chart-unit-label" x="8" y="12">мс</text>'+grid+labels+'<polygon class="chart-area" points="'+area+'"/><polyline class="chart-line" style="stroke:'+accent+'" points="'+pointList+'"/>'+hits+'</svg><div class="chart-hover-line" hidden></div><div class="chart-hover-dot" hidden></div><div class="chart-tooltip" hidden></div>';
+ const svg=el.querySelector('svg'),tooltip=el.querySelector('.chart-tooltip'),dot=el.querySelector('.chart-hover-dot'),line=el.querySelector('.chart-hover-line');
+ function hideHover(){tooltip.hidden=true;dot.hidden=true;line.hidden=true}
+ svg.addEventListener('pointermove',event=>{
+  const rect=svg.getBoundingClientRect();
+  if(!rect.width||!points.length)return;
+  const svgX=(event.clientX-rect.left)/rect.width*W;
+  const boundedX=Math.max(left,Math.min(W-right,svgX));
+  const index=points.length===1?0:Math.max(0,Math.min(points.length-1,Math.round((boundedX-left)/plotW*(points.length-1))));
+  const point=points[index],sample=probeHistory[index];
+  const xPct=point.x/W*100,yPct=point.y/H*100;
+  dot.hidden=false;line.hidden=false;tooltip.hidden=false;
+  dot.style.left=xPct+'%';dot.style.top=yPct+'%';
+  line.style.left=xPct+'%';line.style.top=top/H*100+'%';line.style.height=plotH/H*100+'%';
+  tooltip.style.left=xPct+'%';tooltip.style.top=yPct+'%';
+  tooltip.style.transform=point.x>W*.78?'translate(-100%,-125%)':point.x<W*.22?'translate(0,-125%)':'translate(-50%,-125%)';
+  const time=new Date(sample.time).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  tooltip.textContent=sample.ms+' мс · '+time;
+ });
+ svg.addEventListener('pointerleave',hideHover);
+ $('probeText').textContent='Последнее измерение: '+last.ms+' мс';$('probeDot').className='result-dot '+(last.ok?'ok':'fail');
+}
+function tick(){if(S&&S.state==='on'&&since){$('uptime').textContent=fmtDur(Math.max(0,Math.floor(Date.now()/1000-since)));$('sub').textContent='Подключено '+fmtDur(Math.max(0,Math.floor(Date.now()/1000-since)))}}
+setInterval(tick,1000);
+function toggle(){if(S&&S.state==='off'&&!(S.settings&&S.settings.host)){setPage('connection');return}api('toggle')}
+function ping(){api('ping')}
+function fillForm(s){
+ form=JSON.parse(JSON.stringify(s||{}));form.bypass_apps=(s.bypass_apps||[]).slice();
+ $('f_host').value=s.host||'';$('f_port').value=s.port||'';$('f_user').value=s.username||'';$('f_pass').value=s.password||'';
+ $('f_quic').checked=!!s.block_quic;$('f_udp').checked=!!s.udp_over_socks;$('f_accel').checked=!!s.accelerate;
+ $('f_bypass').value=s.bypass||'';setType(s.proxy_type||'socks5',true);renderApps();
+}
+function setProfileProtocol(t,disabled){
+ const group=$('profileProtocol');
+ if(!group)return;
+ group.classList.toggle('is-http',t==='http');
+ group.querySelectorAll('button').forEach(button=>{
+  const active=button.dataset.v===t;
+  button.classList.toggle('active',active);
+  button.setAttribute('aria-pressed',active?'true':'false');
+  button.disabled=!!disabled;
+  button.title=disabled?'Сохранение типа прокси…':(S&&S.state!=='off'?'Отключите VPN, чтобы сменить протокол':'Переключить тип прокси');
+ });
+}
+async function quickProxyType(t){
+ if(!S||!S.settings||!S.settings.host)return;
+ if(S.state!=='off'){toast('Нельзя сменить протокол','Сначала отключите VPN',false);return}
+ const previous=S.settings.proxy_type||'socks5';
+ if(previous===t)return;
+ const s=Object.assign({},S.settings,{proxy_type:t});
+ if(t==='http'){
+  if(!s.port||s.port===1080)s.port=8080;
+  s.udp_over_socks=false;
+ }else if(!s.port||s.port===8080){s.port=1080}
+ setProfileProtocol(t,true);
+ try{
+  const err=await api('saveSettings',s);
+  if(err){setProfileProtocol(previous,false);toast('Протокол не изменён',err,false);return}
+  S.settings=s;form=JSON.parse(JSON.stringify(s));fillForm(s);
+  setProfileProtocol(t,false);
+  toast('Протокол изменён',t==='http'?'Выбран HTTP CONNECT':'Выбран SOCKS5',true);
+ }catch(e){setProfileProtocol(previous,false);toast('Не удалось сменить протокол',e.message,false)}
+}
+function setType(t,silent){
+ if(!form)form={};form.proxy_type=t;
+ $('seg').classList.toggle('is-http',t==='http');
+ document.querySelectorAll('#seg button').forEach(b=>{const active=b.dataset.v===t;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false')});
+ $('f_udp').disabled=t==='http';if(t==='http')$('f_udp').checked=false;
+ $('profileType').textContent=t==='http'?'HTTP CONNECT':'SOCKS5';
+ if(!silent&&$('f_port').value==='')$('f_port').value=t==='http'?'8080':'1080';
+}
+function eye(){const p=$('f_pass');p.type=p.type==='password'?'text':'password'}
+function readForm(){if(!form)form={proxy_type:'socks5',bypass_apps:[]};return Object.assign({},form,{
+ host:$('f_host').value.trim(),port:parseInt($('f_port').value,10)||0,
+ username:$('f_user').value.trim(),password:$('f_pass').value,
+ block_quic:$('f_quic').checked,udp_over_socks:$('f_udp').checked,accelerate:$('f_accel').checked,
+ bypass:$('f_bypass').value,bypass_apps:(form.bypass_apps||[]).slice()
+})}
+let savedProfiles=[],activeProfileId='',editingProfileId='';
+async function loadProfiles(){
+ try{
+  const data=await api('listProfiles');
+  if(data&&data.error)throw new Error(data.error);
+  savedProfiles=data&&Array.isArray(data.profiles)?data.profiles:[];
+  activeProfileId=data&&data.activeProfileId||'';
+  if(!editingProfileId&&activeProfileId){
+   const current=savedProfiles.find(p=>p.id===activeProfileId);
+   if(current){editingProfileId=current.id;$('profileName').value=current.name||'';$('profileSaveButton').textContent='Сохранить изменения'}
+  }
+  renderProfiles();
+ }catch(e){$('profilesList').innerHTML='<div class="app-empty">Не удалось загрузить профили: '+esc(e.message)+'</div>'}
+}
+function renderProfiles(){
+ const el=$('profilesList');if(!el)return;
+ if(!savedProfiles.length){el.innerHTML='<div class="app-empty">Сохранённых профилей пока нет</div>';return}
+ el.innerHTML=savedProfiles.map(p=>{
+  const active=p.id===activeProfileId;
+  const s=p.settings||{},host=(s.host||'')+(s.port?':'+s.port:'');
+  return '<div class="profile-row'+(active?' active':'')+'"><div class="profile-row-main"><b>'+esc(p.name)+(active?' · активен':'')+'</b><span>'+esc((s.proxy_type==='http'?'HTTP':'SOCKS5')+' · '+host+(s.username?' · '+s.username:''))+'</span></div><div class="profile-row-actions">'+(active?'':'<button onclick="selectProfile(\''+p.id+'\')">Применить</button>')+'<button onclick="editProfile(\''+p.id+'\')">Изменить</button><button class="danger" onclick="deleteProfile(\''+p.id+'\')">×</button></div></div>';
+ }).join('');
+}
+function newProfile(){editingProfileId='';$('profileName').value='';$('profileSaveButton').textContent='Создать профиль'}
+function editProfile(id){
+ const p=savedProfiles.find(x=>x.id===id);if(!p)return;
+ editingProfileId=p.id;$('profileName').value=p.name||'';fillForm(Object.assign({},S&&S.settings||{},p.settings||{}));
+ $('profileSaveButton').textContent='Сохранить изменения';
+}
+async function saveProfile(){
+ const name=$('profileName').value.trim();
+ if(!name){toast('Укажите название','Название профиля обязательно',false);$('profileName').focus();return}
+ const settings=readForm();
+ try{
+  const result=await api('saveProfile',{id:editingProfileId,name,settings});
+  if(result&&result.error)throw new Error(result.error);
+  if(!result||!result.ok)throw new Error('Служба профилей не подтвердила сохранение');
+  editingProfileId=result.profile.id;
+  await loadProfiles();
+  toast('Профиль сохранён',name,true);
+  $('profileSaveButton').textContent='Сохранить изменения';
+ }catch(e){toast('Не удалось сохранить профиль',e.message,false)}
+}
+async function selectProfile(id){
+ try{
+  const result=await api('selectProfile',id);
+  if(result&&result.error)throw new Error(result.error);
+  activeProfileId=id;
+  const p=savedProfiles.find(x=>x.id===id);
+  editingProfileId=id;if(p){$('profileName').value=p.name||'';$('profileSaveButton').textContent='Сохранить изменения'}
+  if(S&&result&&result.settings){S.settings=result.settings;fillForm(result.settings)}else if(p)fillForm(Object.assign({},S&&S.settings||{},p.settings||{}));
+  await loadProfiles();
+  toast('Профиль применён','Настройки сохранены. Можно подключаться.',true);
+ }catch(e){toast('Не удалось переключить профиль',e.message,false)}
+}
+async function deleteProfile(id){
+ const p=savedProfiles.find(x=>x.id===id);if(!p||!confirm('Удалить профиль «'+p.name+'»?'))return;
+ try{
+  const result=await api('deleteProfile',id);
+  if(result&&result.error)throw new Error(result.error);
+  if(activeProfileId===id)activeProfileId='';
+  if(editingProfileId===id)newProfile();
+  await loadProfiles();toast('Профиль удалён',p.name,true);
+ }catch(e){toast('Не удалось удалить профиль',e.message,false)}
+}
+async function save(){
+ try{const s=readForm(),err=await api('saveSettings',s);if(err){toast('Не сохранено',err,false);return}
+ form=JSON.parse(JSON.stringify(s));toast('Настройки сохранены','Изменения будут применены при следующем подключении',true);setPage('home');
+ }catch(e){toast('Ошибка сохранения',e.message,false)}
+}
+async function quick(key,val){
+ if(!S)return;const s=Object.assign({},S.settings,{[key]:val});
+ try{const err=await api('saveSettings',s);if(err){$('q_accel').checked=!!S.settings.accelerate;toast('Не сохранено',err,false);return}
+ if(form)form[key]=val;if(key==='accelerate')$('f_accel').checked=!!val;
+ }catch(e){$('q_accel').checked=!!S.settings.accelerate;toast('Ошибка сохранения',e.message,false)}
+}
+async function pasteLink(){
+ let text='';try{text=await navigator.clipboard.readText()}catch(e){}
+ try{const r=await api('parseLink',text);if(!r)return;if(r.error){toast('Не получилось',r.error,false);return}
+ const keep=readForm();const s=Object.assign(keep,r.settings,{block_quic:keep.block_quic,udp_over_socks:keep.udp_over_socks,accelerate:keep.accelerate,bypass:keep.bypass,bypass_apps:keep.bypass_apps});
+ fillForm(s);toast('Данные из ссылки вставлены','Проверьте параметры и сохраните профиль',true);
+ }catch(e){toast('Ошибка чтения ссылки',e.message,false)}
+}
+function renderApps(){
+ const L=form&&form.bypass_apps||[];$('appCount').textContent=String(L.length);
+ $('bypassApps').innerHTML=L.length?L.map((p,i)=>'<div class="app-item"><div class="app-avatar">'+esc(baseName(p).slice(0,2))+'</div><div class="app-detail"><b>'+esc(baseName(p))+'</b><span title="'+esc(p)+'">'+esc(p)+'</span></div><button class="remove" title="Удалить" onclick="delApp('+i+')">×</button></div>').join(''):'<div class="app-empty">Пока нет исключённых приложений</div>';
+ $('domainCount').textContent=String(($('f_bypass').value||'').split(/[\\s,;]+/).filter(Boolean).length);
+}
+function addApp(p){if(!p||!form)return false;if((form.bypass_apps||[]).some(x=>x.toLowerCase()===p.toLowerCase()))return false;form.bypass_apps=(form.bypass_apps||[]).concat([p]);renderApps();return true}
+function delApp(i){form.bypass_apps.splice(i,1);renderApps()}
+function pickApp(){api('pickApp')}
+window.onPickedApp=p=>{if(p&&!addApp(p))toast('Уже в списке',baseName(p),true)}
+async function openProcs(){
+ $('procQ').value='';$('procList').innerHTML='<div class="app-empty">Загружаю список процессов…</div>';$('app').classList.add('show-procs');
+ try{procs=(await api('listProcs'))||[];renderProcs()}catch(e){$('procList').innerHTML='<div class="app-empty">Не удалось получить список процессов</div>'}
+}
+function closeProcs(){$('app').classList.remove('show-procs')}
+function renderProcs(){
+ const q=$('procQ').value.trim().toLowerCase(),L=procs.filter(p=>!q||p.path.toLowerCase().includes(q));
+ $('procList').innerHTML=L.length?L.map(p=>{const i=procs.indexOf(p),on=(form.bypass_apps||[]).some(x=>x.toLowerCase()===p.path.toLowerCase());
+ return '<div class="app-item'+(on?' added':'')+'" onclick="procClick('+i+')"><div class="app-avatar">'+esc(p.name.slice(0,2))+'</div><div class="app-detail"><b>'+esc(p.name)+'</b><span title="'+esc(p.path)+'">'+esc(p.path)+'</span></div><div class="remove">'+(on?'✓':'+')+'</div></div>'
+ }).join(''):'<div class="app-empty">Ничего не найдено</div>'
+}
+function procClick(i){const p=procs[i];if(!p)return;const ix=form.bypass_apps.findIndex(x=>x.toLowerCase()===p.path.toLowerCase());if(ix>=0)form.bypass_apps.splice(ix,1);else addApp(p.path);renderApps();renderProcs()}
+function renderLogs(){
+ const q=$('logSearch').value.trim().toLowerCase(),filter=$('logFilter').value;
+ const L=logRows.filter(line=>{const x=line.toLowerCase();if(q&&!x.includes(q))return false;
+ const type=/ошибка|error|fatal|panic|не удалось|отклон/.test(x)?'error':/предупреж|warning|warn|timeout|повтор/.test(x)?'warn':/подключён|успеш|пройдена|сохранены|внешний ip/.test(x)?'success':'all';
+ return filter==='all'||type===filter});
+ $('logList').innerHTML=L.length?L.slice().reverse().map(line=>{
+ const m=line.match(/^(\d{2}:\d{2}:\d{2})\s*(.*)$/),time=m?m[1]:'',msg=m?m[2]:line,x=msg.toLowerCase();
+ const type=/ошибка|error|fatal|panic|не удалось|отклон/.test(x)?'error':/предупреж|warning|warn|timeout|повтор/.test(x)?'warn':/подключён|успеш|пройдена|сохранены|внешний ip/.test(x)?'success':'';
+ const symbol=type==='error'?'!':type==='warn'?'▲':type==='success'?'✓':'·';
+ return '<div class="log-entry '+type+'"><span class="log-time">'+esc(time)+'</span><span class="log-symbol">'+symbol+'</span><span class="log-message">'+esc(msg)+'</span></div>'
+ }).join(''):'<div class="log-empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5M9 13h8M9 17h6"/></svg></div>По заданным условиям событий нет</div>'
+}
+async function clearLogs(){try{const err=await api('clearLog');if(err){toast('Не удалось очистить журнал',err,false);return}logRows=[];renderLogs();toast('Журнал очищен','Текущий журнал приложения очищен',true)}catch(e){toast('Не удалось очистить журнал',e.message,false)}}
+async function copyLogs(){try{await navigator.clipboard.writeText(logRows.join('\n'));toast('Скопировано','Журнал скопирован в буфер обмена',true)}catch(e){toast('Буфер обмена недоступен','Откройте файл журнала через кнопку «Открыть файл»',false)}}
+function openOnboarding(){
+ $('onboarding').classList.add('show');
+ if(S&&S.settings){wizardType=S.settings.proxy_type||'socks5';setWizardType(wizardType);$('w_host').value=S.settings.host||'';$('w_port').value=S.settings.port||1080;$('w_user').value=S.settings.username||'';$('w_pass').value=S.settings.password||'';$('w_accel').checked=!!S.settings.accelerate}
+}
+function setWizardType(t){wizardType=t;$('wSeg').classList.toggle('is-http',t==='http');document.querySelectorAll('#wSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v===t));if(!$('w_port').value||$('w_port').value==='1080'||$('w_port').value==='8080')$('w_port').value=t==='http'?'8080':'1080'}
+function skipOnboarding(){onboardingDismissed=true;$('onboarding').classList.remove('show');setPage('home')}
+async function saveOnboarding(){
+ const s=Object.assign({},S&&S.settings||{},{
+  proxy_type:wizardType,host:$('w_host').value.trim(),port:parseInt($('w_port').value,10)||0,
+  username:$('w_user').value.trim(),password:$('w_pass').value,accelerate:$('w_accel').checked
+ });
+ try{const err=await api('saveSettings',s);if(err){toast('Не удалось сохранить',err,false);return}
+ form=JSON.parse(JSON.stringify(s));onboardingDismissed=true;$('onboarding').classList.remove('show');fillForm(s);toast('Профиль сохранён','Теперь можно подключаться',true);setPage('home')
+ }catch(e){toast('Ошибка сохранения',e.message,false)}
+}
+$('f_bypass').addEventListener('input',renderApps);
+function tickLogs(){if(activePage==='routing')renderApps()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('app').classList.contains('show-procs'))closeProcs();else if($('onboarding').classList.contains('show'))skipOnboarding()}});
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea,pre'))e.preventDefault()});
+function saveUIPrefs(){try{localStorage.setItem('pvpn-ui-preferences',JSON.stringify(uiPrefs))}catch(e){toast('Не удалось сохранить параметры интерфейса','Хранилище WebView недоступно',false)}}
+let particleFrame=0,particleCanvas=null,particleCtx=null,particleNodes=[],particleWidth=0,particleHeight=0,particlePointer=null;
+function setParticleBackground(enabled){
+ const canvas=$('ambientParticles');if(!canvas)return;
+ if(!enabled){if(particleFrame)cancelAnimationFrame(particleFrame);particleFrame=0;canvas.style.display='none';return}
+ canvas.style.display='block';
+ if(!particleCtx){particleCanvas=canvas;particleCtx=canvas.getContext('2d',{alpha:true});if(!particleCtx)return;window.addEventListener('resize',resizeParticleCanvas,{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(particleFrame)cancelAnimationFrame(particleFrame);particleFrame=0}else if(uiPrefs.particles)startParticleLoop()});}
+ resizeParticleCanvas();startParticleLoop();
+}
+function resizeParticleCanvas(){
+ if(!particleCanvas||!particleCtx)return;const rect=particleCanvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,1.5);if(rect.width<1||rect.height<1)return;
+ particleCanvas.width=Math.round(rect.width*dpr);particleCanvas.height=Math.round(rect.height*dpr);particleCtx.setTransform(dpr,0,0,dpr,0,0);particleWidth=rect.width;particleHeight=rect.height;
+ const count=Math.max(22,Math.min(58,Math.round(rect.width*rect.height/26000)));particleNodes=Array.from({length:count},()=>({x:Math.random()*rect.width,y:Math.random()*rect.height,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,r:1+Math.random()*1.25}));
+}
+function startParticleLoop(){if(particleFrame||document.hidden||!particleCtx||!uiPrefs.particles)return;particleFrame=requestAnimationFrame(drawParticleFrame)}
+function drawParticleFrame(){
+ particleFrame=0;if(!particleCtx||!uiPrefs.particles||document.hidden)return;const ctx=particleCtx,w=particleWidth,h=particleHeight;if(!w||!h)return;ctx.clearRect(0,0,w,h);
+ const accent=getComputedStyle(document.documentElement).getPropertyValue('--theme-accent-rgb').trim()||'139,92,246';
+ for(const p of particleNodes){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y))}
+ for(let i=0;i<particleNodes.length;i++){const a=particleNodes[i];for(let j=i+1;j<particleNodes.length;j++){const b=particleNodes[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<165){ctx.strokeStyle='rgba('+accent+','+(0.20*(1-d/165))+')';ctx.lineWidth=1.05;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
+ if(particlePointer){
+  const nearby=particleNodes.map(p=>({p,d:Math.hypot(p.x-particlePointer.x,p.y-particlePointer.y)})).sort((a,b)=>a.d-b.d).slice(0,6);
+  for(const item of nearby){const p=item.p,d=item.d;if(d<360){const alpha=.38*(1-d/360);ctx.strokeStyle='rgba('+accent+','+alpha.toFixed(3)+')';ctx.lineWidth=1.35;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(particlePointer.x,particlePointer.y);ctx.stroke()}}
+  ctx.beginPath();ctx.arc(particlePointer.x,particlePointer.y,3.5,0,Math.PI*2);ctx.fillStyle='rgba('+accent+',.58)';ctx.shadowColor='rgba('+accent+',.8)';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+ }
+ for(const p of particleNodes){ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba('+accent+',.72)';ctx.shadowColor='rgba('+accent+',.62)';ctx.shadowBlur=7;ctx.fill()}ctx.shadowBlur=0;particleFrame=requestAnimationFrame(drawParticleFrame);
+}
+window.addEventListener('pointermove',event=>{if(!particleCanvas)return;const rect=particleCanvas.getBoundingClientRect();const x=event.clientX-rect.left,y=event.clientY-rect.top;particlePointer=(x>=0&&y>=0&&x<=rect.width&&y<=rect.height)?{x,y}:null},{passive:true});
+window.addEventListener('blur',()=>{particlePointer=null});
+function setUIPref(key,value){
+ if(!Object.prototype.hasOwnProperty.call(uiPrefs,key))return;
+ uiPrefs[key]=!!value;saveUIPrefs();applyUIPreferences();
+ if(key==='rememberPage'&&!value){try{localStorage.removeItem('pvpn-last-page')}catch(e){}}
+}
+function applyUIPreferences(){
+ $('app').classList.toggle('compact-ui',!!uiPrefs.compact);
+ document.documentElement.classList.toggle('reduce-motion',!!uiPrefs.reduceMotion);
+ if($('pref_compact'))$('pref_compact').checked=!!uiPrefs.compact;
+ if($('pref_motion'))$('pref_motion').checked=!uiPrefs.reduceMotion;
+ if($('pref_page'))$('pref_page').checked=!!uiPrefs.rememberPage;
+  if($('pref_particles'))$('pref_particles').checked=!!uiPrefs.particles;
+  setParticleBackground(!!uiPrefs.particles);
+}
+applyUIPreferences();
+if(uiPrefs.rememberPage){try{const last=localStorage.getItem('pvpn-last-page');if(last&&pageInfo[last]&&last!=='mini')setPage(last)}catch(e){}}
+api('ready');
+loadProfiles();
+
+</script>
+</body>
+</html>

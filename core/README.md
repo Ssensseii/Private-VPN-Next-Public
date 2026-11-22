@@ -1,0 +1,1 @@
+The workflow downloads the official sing-box 1.14.4 Windows amd64 release, verifies its SHA-256, and places sing-box.exe here in the installer staging directory. The binary is intentionally not committed to the source repository.

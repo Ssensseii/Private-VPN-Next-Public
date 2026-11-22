@@ -1,0 +1,59 @@
+name: Validate pull request
+
+on:
+  pull_request:
+    branches: [feat/manual-updates-rollback]
+    paths:
+      - 'source/unpacked/src/**'
+      - '.github/workflows/validate-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Go tests, vet, and UI syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate embedded UI JavaScript
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          html = pathlib.Path('source/unpacked/src/ui.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+          if not scripts:
+              raise SystemExit('Embedded UI script was not found')
+          pathlib.Path('/tmp/privatevpn-ui.js').write_text(scripts[-1], encoding='utf-8')
+          PY
+          node --check /tmp/privatevpn-ui.js
+
+      - name: Run Go tests
+        working-directory: source/unpacked/src
+        run: go test -race ./...
+
+      - name: Run Go vet
+        working-directory: source/unpacked/src
+        run: go vet ./...
+
+      - name: Compile Windows test binary
+        working-directory: source/unpacked/src
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: go test -c -o /tmp/privatevpn-windows.test.exe ./...

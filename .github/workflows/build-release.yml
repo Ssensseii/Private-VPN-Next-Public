@@ -1,0 +1,218 @@
+name: Build and verify Windows installer
+
+on:
+  push:
+    branches: [main, fix/build9-quality, fix/build10-proxy-routing-latency, fix/http-connect-acceleration-and-socks-retry, feat/premium-ui-redesign, fix/premium-ui-colors, fix/premium-gradient-icons-pass2, fix/probe-latency-sync-green-success, fix/tray-state-http-theme-chart, feat/manual-updates-rollback, feat/in-app-update-rollback, feat/profiles-polish-0118, fix/tun-adapter-ui-motion, fix/final-socks5-ui-polish]
+    paths:
+      - 'source/parts/**'
+      - 'source/SHA256SUMS.txt'
+      - 'source/unpacked/**'
+      - 'installer/**'
+      - 'assets/**'
+      - '.github/workflows/build-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: privatevpn-next-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Go tests and static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+
+      - name: Refresh compressed source archive from canonical source tree
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/PrivateVPN-Next-source.tar.xz"
+          encoded="$RUNNER_TEMP/PrivateVPN-Next-source.b64"
+          tar -cJf "$archive" -C source/unpacked .
+          base64 -w0 "$archive" > "$encoded"
+          rm -f source/parts/part-*.b64
+          split -b 6000 -d -a 2 "$encoded" "$RUNNER_TEMP/pvpn-part-"
+          index=1
+          for chunk in "$RUNNER_TEMP"/pvpn-part-*; do
+            printf -v name 'part-%02d.b64' "$index"
+            cp "$chunk" "source/parts/$name"
+            index=$((index+1))
+          done
+          sha256sum "$archive" | awk '{print $1 "  PrivateVPN-Next-source.tar.xz"}' > source/SHA256SUMS.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add source/parts source/SHA256SUMS.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh compressed source archive"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Verify source archive and expanded source tree
+        shell: bash
+        run: |
+          cat source/parts/part-*.b64 | tr -d '\r\n' | base64 --decode > /tmp/PrivateVPN-Next-source.tar.xz
+          expected="$(awk '{print $1}' source/SHA256SUMS.txt)"
+          echo "$expected  /tmp/PrivateVPN-Next-source.tar.xz" | sha256sum -c -
+          tar -tJf /tmp/PrivateVPN-Next-source.tar.xz >/dev/null
+          test -f source/unpacked/src/go.mod
+          test -f source/unpacked/src/ui.html
+
+      - name: Test
+        working-directory: source/unpacked/src
+        run: go test -race ./...
+
+      - name: Vet
+        working-directory: source/unpacked/src
+        run: go vet ./...
+
+  build-windows:
+    name: Build Windows x64 installer
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+
+      - name: Verify expanded source tree
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'source/unpacked/src/go.mod')) { throw 'Expanded Go source is missing' }
+          if (-not (Test-Path -LiteralPath 'source/unpacked/src/ui.html')) { throw 'Expanded UI source is missing' }
+
+      - name: Validate embedded UI JavaScript
+        shell: pwsh
+        run: |
+          $ui = Get-Content -LiteralPath 'source/unpacked/src/ui.html' -Raw
+          $match = [regex]::Match($ui, '(?s)<script>(.*?)</script>')
+          if (-not $match.Success) { throw 'Embedded UI script was not found' }
+          $scriptPath = Join-Path $env:RUNNER_TEMP 'privatevpn-ui.js'
+          Set-Content -LiteralPath $scriptPath -Value $match.Groups[1].Value -Encoding utf8
+          node --check $scriptPath
+          if ($LASTEXITCODE -ne 0) { throw 'Embedded UI JavaScript syntax check failed' }
+
+      - name: Test and vet on Windows
+        shell: pwsh
+        working-directory: source/unpacked/src
+        run: |
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Go tests failed' }
+          # COM ABI callbacks require uintptr/unsafe.Pointer conversions; disable only this vet analyzer.
+          go vet -unsafeptr=false ./...
+          if ($LASTEXITCODE -ne 0) { throw 'go vet failed' }
+
+      - name: Download and verify sing-box 1.14.4
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-windows-amd64.zip'
+          $zip = Join-Path $env:RUNNER_TEMP 'sing-box-1.14.4-windows-amd64.zip'
+          Invoke-WebRequest -Uri $url -OutFile $zip
+          $expected = '99185d75d314a07dbba4a130c8ad986cbeb629a07927975636b341ca61f991df'
+          $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "sing-box archive SHA-256 mismatch: $actual" }
+          $extract = Join-Path $env:RUNNER_TEMP 'sing-box-extracted'
+          Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
+          $exe = Get-ChildItem -LiteralPath $extract -Filter 'sing-box.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'sing-box.exe was not found in the official archive' }
+          New-Item -ItemType Directory -Force -Path 'dist/core' | Out-Null
+          Copy-Item -LiteralPath $exe.FullName -Destination 'dist/core/sing-box.exe'
+          Copy-Item -LiteralPath 'core/LICENSE-sing-box.txt' -Destination 'dist/core/LICENSE-sing-box.txt'
+          & 'dist/core/sing-box.exe' version
+          if ($LASTEXITCODE -ne 0) { throw 'sing-box version command failed' }
+
+      - name: Validate sample sing-box configurations
+        shell: pwsh
+        run: |
+          & 'dist/core/sing-box.exe' check -c 'source/unpacked/validation/config_next_validation.json'
+          if ($LASTEXITCODE -ne 0) { throw 'Basic validation config failed' }
+          & 'dist/core/sing-box.exe' check -c 'source/unpacked/validation/config_next_accel_validation.json'
+          if ($LASTEXITCODE -ne 0) { throw 'Accelerator validation config failed' }
+          & 'dist/core/sing-box.exe' check -c 'source/unpacked/validation/config_next_http_validation.json'
+          if ($LASTEXITCODE -ne 0) { throw 'HTTP CONNECT + DoH validation config failed' }
+          & 'dist/core/sing-box.exe' check -c 'source/unpacked/validation/config_next_http_accel_validation.json'
+          if ($LASTEXITCODE -ne 0) { throw 'HTTP CONNECT accelerator validation config failed' }
+
+      - name: Download Microsoft WebView2 loader
+        shell: pwsh
+        run: |
+          $version = '1.0.4314.35'
+          $nupkg = Join-Path $env:RUNNER_TEMP "Microsoft.Web.WebView2.$version.nupkg"
+          $zip = Join-Path $env:RUNNER_TEMP "Microsoft.Web.WebView2.$version.zip"
+          $url = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$version"
+          Invoke-WebRequest -Uri $url -OutFile $nupkg
+          Copy-Item -LiteralPath $nupkg -Destination $zip
+          $extract = Join-Path $env:RUNNER_TEMP 'webview2-package'
+          Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
+          $dll = Get-ChildItem -LiteralPath $extract -Filter 'WebView2Loader.dll' -File -Recurse |
+            Where-Object { $_.FullName -match '[\\/]x64[\\/]' } | Select-Object -First 1
+          if (-not $dll) { throw 'x64 WebView2Loader.dll was not found in Microsoft.Web.WebView2 NuGet package' }
+          Copy-Item -LiteralPath $dll.FullName -Destination 'dist/WebView2Loader.dll' -Force
+
+      - name: Generate application icon and embed Windows resources
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
+          & 'installer/MakeIcon.ps1' -OutputPath 'dist/app.ico'
+          go install github.com/tc-hib/go-winres@c4d55a3dfc2e22a4a9fb95ae0280ce106daadce9
+          if ($LASTEXITCODE -ne 0) { throw 'Could not install the pinned go-winres resource compiler' }
+          $goPath = (go env GOPATH).Trim()
+          $winres = Join-Path $goPath 'bin/go-winres.exe'
+          if (-not (Test-Path -LiteralPath $winres)) { throw 'go-winres.exe was not found after installation' }
+          Push-Location 'source/unpacked/src'
+          & $winres simply --arch amd64 --icon '../../../dist/app.ico' --manifest gui --admin --file-description 'PrivateVPN Next' --product-name 'PrivateVPN Next' --original-filename 'PrivateVPN-Next.exe'
+          if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Could not embed application icon and Windows manifest' }
+          Pop-Location
+          if (-not (Test-Path -LiteralPath 'source/unpacked/src/rsrc_windows_amd64.syso')) { throw 'go-winres did not create the amd64 resource object' }
+
+      - name: Build and stage application
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
+          Copy-Item -LiteralPath 'source/unpacked/PrivateVPN-Next.exe.manifest' -Destination 'dist/PrivateVPN-Next.exe.manifest' -Force
+          Copy-Item -LiteralPath 'source/unpacked/validation' -Destination 'dist/validation' -Recurse -Force
+          Copy-Item -LiteralPath 'README.md' -Destination 'dist/README.txt' -Force
+          Copy-Item -LiteralPath 'THIRD_PARTY_NOTICES.md' -Destination 'dist/THIRD_PARTY_NOTICES.txt' -Force
+          Push-Location 'source/unpacked/src'
+          go build -trimpath -ldflags="-s -w -H windowsgui -X main.appVersion=0.1.118" -o '../../../dist/PrivateVPN-Next.exe' .
+          if ($LASTEXITCODE -ne 0) { throw 'Windows amd64 build failed' }
+          Pop-Location
+          New-Item -ItemType Directory -Force -Path 'release' | Out-Null
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.118
+        run: |
+          choco install innosetup --yes --no-progress
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc)) { throw 'Inno Setup compiler was not found' }
+          & $iscc 'installer/PrivateVPN-Next.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed' }
+
+      - name: Create portable package and checksums
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'dist/*' -DestinationPath 'release/PrivateVPN-Next-portable.zip' -CompressionLevel Optimal
+          Get-FileHash 'release/PrivateVPN-Next-Setup.exe' -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  PrivateVPN-Next-Setup.exe" } | Set-Content 'release/SHA256SUMS.txt'
+          Get-FileHash 'release/PrivateVPN-Next-portable.zip' -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  PrivateVPN-Next-portable.zip" } | Add-Content 'release/SHA256SUMS.txt'
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrivateVPN-Next-Windows-x64
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
