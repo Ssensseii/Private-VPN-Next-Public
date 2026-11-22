@@ -265,20 +265,26 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .wizard-actions{display:flex;justify-content:space-between;gap:10px;margin-top:21px}
 .wizard-actions .primary-button{min-width:145px}
 .mini-window .sidebar,.mini-window .topbar{display:none!important}
-.mini-window .content{padding:22px 24px;overflow:auto;display:flex;align-items:center;justify-content:center}
+.mini-window .content{padding:28px 30px;overflow:auto;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(124,92,231,.16),transparent 62%)}
 .mini-window .view{display:none!important}
-.mini-window #view-mini{display:flex!important;align-items:center;justify-content:center;width:100%;max-width:520px;min-height:100%;margin:0 auto}
-.mini-window .mini-wrap{width:100%;max-width:460px;margin:auto}
-.mini-window .mini-card{width:100%;padding:26px;border-radius:22px;box-shadow:0 22px 70px rgba(0,0,0,.32)}
-.mini-window .mini-brand{margin-bottom:24px}
-.mini-window .mini-state{margin-bottom:20px}
-.mini-window .mini-data{gap:12px;margin-top:22px}
-.mini-window .mini-open{margin-top:22px}
-.mini-window .mini-window-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-.mini-window .mini-back{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px 13px;background:rgba(255,255,255,.04);color:var(--text);font-size:12px;font-weight:650;cursor:pointer}
+.mini-window #view-mini{display:flex!important;align-items:center;justify-content:center;width:100%;max-width:540px;min-height:100%;margin:0 auto}
+.mini-window .mini-wrap{width:100%;max-width:480px;margin:auto}
+.mini-window .mini-card{width:100%;padding:30px;border-radius:24px;background:linear-gradient(145deg,rgba(30,48,78,.98),rgba(16,25,46,.98));border:1px solid rgba(120,150,205,.28);box-shadow:0 24px 70px rgba(0,0,0,.38)}
+.mini-window .mini-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;font-size:15px}
+.mini-window .mini-state{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.mini-window .mini-state b{font-size:21px;line-height:1.25}
+.mini-window .mini-state span{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+.mini-window #miniToggle{min-height:50px;border-radius:14px;font-size:14px;letter-spacing:.01em}
+.mini-window .mini-data{display:grid;gap:0;margin-top:24px;padding:6px 16px;border:1px solid rgba(120,150,205,.16);border-radius:16px;background:rgba(7,14,29,.24)}
+.mini-window .mini-data .info-row{padding:12px 0;border-bottom:1px solid rgba(120,150,205,.12)}
+.mini-window .mini-data .info-row:last-child{border-bottom:0}
+.mini-window .mini-data .info-row strong{font-size:12px}
+.mini-window .mini-open{width:100%;min-height:46px;margin-top:22px;border-radius:13px}
+.mini-window .mini-window-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+.mini-window .mini-back{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(130,155,205,.24);border-radius:12px;padding:10px 14px;background:rgba(19,30,54,.82);color:var(--text);font-size:12px;font-weight:650;cursor:pointer;transition:background .18s,border-color .18s}
 .mini-window .mini-back:hover{background:rgba(255,255,255,.09);border-color:var(--accent)}
-.mini-window .mini-window-caption{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-@media(max-height:560px){.mini-window .content{padding:12px}.mini-window .mini-card{padding:18px}.mini-window .mini-brand{margin-bottom:12px}.mini-window .mini-state{margin-bottom:12px}.mini-window .mini-data{margin-top:12px;gap:7px}.mini-window .mini-open{margin-top:12px}}
+.mini-window .mini-window-caption{font-size:11px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
+@media(max-height:620px){.mini-window .content{padding:14px}.mini-window .mini-card{padding:20px}.mini-window .mini-brand{margin-bottom:16px}.mini-window .mini-state{margin-bottom:14px}.mini-window .mini-data{margin-top:14px}.mini-window .mini-data .info-row{padding:8px 0}.mini-window .mini-open{margin-top:14px}}
 .update-progress{height:9px;border-radius:20px;overflow:hidden;background:#17243b;border:1px solid var(--line);margin-top:10px}
 .update-progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c5ce7,#25c997);transition:width .18s ease}
 .update-progress-label{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted);margin-top:6px}
@@ -798,7 +804,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
       <div class="status-sub" id="sub">Сначала настройте прокси-сервер</div>
       <div class="hero-actions">
        <button class="primary-button" id="connectBtn" onclick="toggle()">Подключить</button>
-       <button class="secondary-button" id="pingBtn" onclick="ping()">Проверить</button>
+       <button class="secondary-button" id="pingBtn" onclick="ping()">Измерить пинг · 10 сек</button>
       </div>
      </div>
      <div class="card connection-card">
@@ -992,7 +998,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
       <button class="mini-back" type="button" onclick="api('restoreWindow')" aria-label="Вернуться в основное окно"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18 9 12l6-6"/><path d="M9 12h11"/></svg> Вернуться в приложение</button>
      </div>
      <div class="mini-card">
-      <div class="mini-brand"><b>PrivateVPN <span style="color:#a78bfa">Next</span></b><span>Быстрое управление</span></div>
+      <div class="mini-brand"><b>PrivateVPN <span style="color:#a78bfa">Next</span></b><span>Состояние соединения</span></div>
       <div class="mini-state"><div class="mini-shield"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2.5 20 5.6v6.1c0 4.8-3.3 8.7-8 10.1-4.7-1.4-8-5.3-8-10.1V5.6L12 2.5Z"/><path d="m8 12 2.6 2.6 5.4-5.5"/></svg></div><div><b id="miniStatus">Не подключено</b><span id="miniServer">Сервер не настроен</span></div></div>
       <button class="primary-button" id="miniToggle" onclick="toggle()">Подключить</button>
       <div class="mini-data">
