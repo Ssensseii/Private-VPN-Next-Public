@@ -18,6 +18,8 @@ import (
 const (
 	proxyProbeTimeout = 2500 * time.Millisecond
 	proxyProbeCount   = 3
+	pingMeasurementDuration = 10 * time.Second
+	pingSampleInterval = 250 * time.Millisecond
 )
 
 // This fixed IPv4 target avoids sending AAAA destinations to proxies that reject them.
@@ -61,6 +63,46 @@ func measureProxyRTT(ctx context.Context, proxy Settings, targets []string) (tim
 	}
 	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
 	return samples[len(samples)/2], nil
+}
+
+// measureProxyRTTWindow samples the active proxy for the full measurement window
+// and returns the median successful TCP CONNECT handshake time.
+func measureProxyRTTWindow(ctx context.Context, proxy Settings, targets []string, duration time.Duration) (time.Duration, error) {
+	if duration <= 0 { return 0, errors.New("длительность измерения должна быть больше нуля") }
+	if len(targets) == 0 { return 0, errors.New("не заданы адреса TCP CONNECT-проверки") }
+	if err := proxy.Validate(); err != nil { return 0, err }
+	deadline := time.Now().Add(duration)
+	samples := make([]time.Duration, 0, 32)
+	var probeErrors []error
+	for time.Now().Before(deadline) {
+		if err := ctx.Err(); err != nil { return 0, err }
+		target := targets[len(samples)%len(targets)]
+		sampleStarted := time.Now()
+		sampleCtx, cancel := context.WithDeadline(ctx, deadline)
+		conn, err := proxyConnect(sampleCtx, proxy, target)
+		elapsed := time.Since(sampleStarted)
+		cancel()
+		if conn != nil { _ = conn.Close() }
+		if err == nil {
+			if elapsed < time.Millisecond { elapsed = time.Millisecond }
+			samples = append(samples, elapsed)
+		} else { probeErrors = append(probeErrors, err) }
+		wait := time.NewTimer(pingSampleInterval)
+		select {
+		case <-ctx.Done():
+			if !wait.Stop() { select { case <-wait.C: default: } }
+			return 0, ctx.Err()
+		case <-wait.C:
+		}
+	}
+	if len(samples) == 0 {
+		if len(probeErrors) > 0 { return 0, fmt.Errorf("за 10 секунд не удалось выполнить ни одной проверки: %w", errors.Join(probeErrors...)) }
+		return 0, errors.New("за 10 секунд не получено ни одного результата")
+	}
+	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+	mid := len(samples)/2
+	if len(samples)%2 == 0 { return (samples[mid-1]+samples[mid])/2, nil }
+	return samples[mid], nil
 }
 
 func proxyConnect(ctx context.Context, proxy Settings, target string) (net.Conn, error) {
