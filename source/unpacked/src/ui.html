@@ -1124,9 +1124,9 @@ const pageInfo={
 };
 function setPage(page){
  if(!pageInfo[page])page='home';
- if(page==='mini'&&!document.documentElement.classList.contains('mini-window'))api('showMini');
+ if(page==='mini'&&!$('app').classList.contains('mini-window'))api('showMini');
  activePage=page;
- document.querySelectorAll('.view').forEach(v=>{const active=v.id==='view-'+page;v.classList.toggle('active',active);if(active&&!uiPrefs.reduceMotion&&!document.documentElement.classList.contains('mini-window')){v.style.animation='none';void v.offsetWidth;v.style.animation=''}});
+ document.querySelectorAll('.view').forEach(v=>{const active=v.id==='view-'+page;v.classList.toggle('active',active);if(active&&!uiPrefs.reduceMotion&&!$('app').classList.contains('mini-window')){v.style.animation='none';void v.offsetWidth;v.style.animation=''}});
  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  $('pageTitle').textContent=pageInfo[page][0];$('pageSubtitle').textContent=pageInfo[page][1];
  if(page==='logs')renderLogs();
@@ -1134,8 +1134,8 @@ function setPage(page){
  if(page==='routing')renderApps();
  if(uiPrefs.rememberPage){try{localStorage.setItem('pvpn-last-page',page)}catch(e){}}
 }
-window.openMiniPanel=function(){$('app').classList.add('mini-window');setPage('mini')};
-window.exitMiniPanel=function(){$('app').classList.remove('mini-window');setPage('home')};
+window.openMiniPanel=function(){const app=$('app');if(!app.classList.contains('mini-window'))app.classList.add('mini-window');setPage('mini')};
+window.exitMiniPanel=function(){const app=$('app');if(app.classList.contains('mini-window'))app.classList.remove('mini-window');setPage('home')};
 function fmtMs(ms){return ms>0?ms+' мс':'—'}
 function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
 function latClass(ms){return !(ms>0)?'':ms<400?'good':ms<900?'mid':'bad'}
