@@ -34,6 +34,8 @@ var (
 	pDestroyWindow       = user32.NewProc("DestroyWindow")
 	pGetClientRect       = user32.NewProc("GetClientRect")
 	pSetForegroundWindow = user32.NewProc("SetForegroundWindow")
+	pSetActiveWindow     = user32.NewProc("SetActiveWindow")
+	pSetFocus            = user32.NewProc("SetFocus")
 	pSetWindowPos       = user32.NewProc("SetWindowPos")
 	pLoadCursor          = user32.NewProc("LoadCursorW")
 )
@@ -49,6 +51,7 @@ const (
 	cwUseDefault                            = 0x80000000
 	swHide                                  = 0
 	swShow                                  = 5
+	swRestore                               = 9
 	swpNoMove                               = 0x0002
 	swpNoZOrder                             = 0x0004
 	swpShowWindow                           = 0x0040
@@ -298,14 +301,30 @@ func updateWebViewBounds(a *app) {
 
 func (a *app) show() {
 	a.reconcileCoreState()
-	if a.hwnd != 0 {
-		pShowWindow.Call(a.hwnd, swShow)
-		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 1180, 800, swpNoMove|swpNoZOrder|swpShowWindow)
-		pSetForegroundWindow.Call(a.hwnd)
-		updateWebViewBounds(a)
-		pUpdateWindow.Call(a.hwnd)
-		a.executeScript("requestAnimationFrame(()=>requestAnimationFrame(()=>{window.exitMiniPanel&&window.exitMiniPanel();window.vpn_ready&&window.vpn_ready();window.dispatchEvent(new Event('resize'))}))")
+	if a.hwnd == 0 {
+		return
 	}
+
+	// Restore the native top-level window before resizing the WebView host.
+	// SW_RESTORE also handles the case where the main window was minimized.
+	pShowWindow.Call(a.hwnd, swRestore)
+	if ok, _, _ := pSetWindowPos.Call(a.hwnd, 0, 0, 0, 1180, 800, swpNoMove|swpNoZOrder|swpShowWindow); ok == 0 {
+		a.addLog("Не удалось изменить размер основного окна при возврате из мини-панели.")
+	}
+	pSetForegroundWindow.Call(a.hwnd)
+	pSetActiveWindow.Call(a.hwnd)
+	pSetFocus.Call(a.hwnd)
+
+	// WebView2 owns a child HWND. Recalculate its bounds after the host window
+	// has been restored, then explicitly make the controller visible again.
+	updateWebViewBounds(a)
+	if a.controller != 0 {
+		comCall(a.controller, webViewControllerPutIsVisibleIndex, 1)
+	}
+	pUpdateWindow.Call(a.hwnd)
+
+	// Change the document layout only after the native window has its final size.
+	a.executeScript("requestAnimationFrame(()=>requestAnimationFrame(()=>{if(window.exitMiniPanel)window.exitMiniPanel();if(window.vpn_ready)window.vpn_ready();window.dispatchEvent(new Event('resize'))}))")
 }
 
 func (a *app) showMini() {
