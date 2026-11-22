@@ -48,13 +48,8 @@ jobs:
             index=$((index+1))
           done
           sha256sum "$archive" | awk '{print $1 "  PrivateVPN-Next-source.tar.xz"}' > source/SHA256SUMS.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add source/parts source/SHA256SUMS.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "Refresh compressed source archive"
-            git push origin "HEAD:$GITHUB_REF_NAME"
-          fi
+          # Keep the generated archive local to this run. The canonical source tree
+          # is already committed under source/unpacked; CI must not push to main.
 
       - name: Verify source archive and expanded source tree
         shell: bash
