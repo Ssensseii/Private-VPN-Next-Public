@@ -190,6 +190,23 @@ func startFakeHTTPProbeProxy(t *testing.T, status int, expectedAuth string) stri
 	return ln.Addr().String()
 }
 
+func TestMeasureProxyRTTWindowRunsForFullTenSeconds(t *testing.T) {
+	addr := startFakeSOCKSProbeProxy(t, "", "", 0)
+	proxy := proxySettingsForTest(t, "socks5", addr, "", "")
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	defer cancel()
+	started := time.Now()
+	got, err := measureProxyRTTWindow(ctx, proxy, proxyProbeTargets, 10*time.Second)
+	elapsed := time.Since(started)
+	if err != nil { t.Fatal(err) }
+	if elapsed < 10*time.Second || elapsed > 11*time.Second {
+		t.Fatalf("measurement must run for 10 seconds, got %s", elapsed)
+	}
+	if got < time.Millisecond || got > time.Second {
+		t.Fatalf("unexpected median proxy CONNECT duration: %s", got)
+	}
+}
+
 func TestMeasureProxyRTTUsesSOCKS5Connect(t *testing.T) {
 	addr := startFakeSOCKSProbeProxy(t, "", "", 0)
 	proxy := proxySettingsForTest(t, "socks5", addr, "", "")
