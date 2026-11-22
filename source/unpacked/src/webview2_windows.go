@@ -54,6 +54,7 @@ const (
 	swpShowWindow                           = 0x0040
 	wmDestroy                               = 0x0002
 	wmSize                                  = 0x0005
+	wmWindowPosChanged                      = 0x0047
 	wmClose                                 = 0x0010
 	wmCommand                               = 0x0111
 	wmApp                                   = 0x8000
@@ -232,9 +233,10 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		return r
 	}
 	switch message {
-	case wmSize:
+	case wmSize, wmWindowPosChanged:
+		r, _, _ := pDefWindowProc.Call(hwnd, uintptr(message), wParam, lParam)
 		updateWebViewBounds(a)
-		return 0
+		return r
 	case wmClose:
 		coreRunning := a.core != nil && a.core.Running()
 		a.mu.Lock()
@@ -305,10 +307,11 @@ func (a *app) showMini() {
 	a.reconcileCoreState()
 	if a.hwnd != 0 {
 		pShowWindow.Call(a.hwnd, swShow)
-		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 620, 680, swpNoMove|swpNoZOrder|swpShowWindow)
+		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 500, 590, swpNoMove|swpNoZOrder|swpShowWindow)
 		pSetForegroundWindow.Call(a.hwnd)
 		updateWebViewBounds(a)
-		a.executeScript("window.openMiniPanel&&window.openMiniPanel();window.vpn_ready&&window.vpn_ready()")
+		pUpdateWindow.Call(a.hwnd)
+		a.executeScript("requestAnimationFrame(()=>{window.openMiniPanel&&window.openMiniPanel();window.vpn_ready&&window.vpn_ready();requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')))})")
 	}
 }
 
