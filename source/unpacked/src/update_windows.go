@@ -9,7 +9,25 @@ type rollbackState struct{InstallDir string `json:"installDir"`;CreatedAt time.T
 var updateHTTPClient=&http.Client{Timeout:90*time.Second}
 func latestStableRelease(ctx context.Context)(stableRelease,error){req,e:=http.NewRequestWithContext(ctx,http.MethodGet,stableReleaseAPI,nil);if e!=nil{return stableRelease{},e};req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28");resp,e:=updateHTTPClient.Do(req);if e!=nil{return stableRelease{},e};defer resp.Body.Close();if resp.StatusCode!=200{return stableRelease{},fmt.Errorf("GitHub API HTTP %d",resp.StatusCode)};var rel stableRelease;e=json.NewDecoder(io.LimitReader(resp.Body,2<<20)).Decode(&rel);if e==nil&&rel.TagName==""{e=errors.New("GitHub не вернул тег релиза")};return rel,e}
 func checkStableUpdate(ctx context.Context,current string)(updateInfo,error){i:=updateInfo{CurrentVersion:current,RollbackAvailable:hasRollback()};r,e:=latestStableRelease(ctx);if e!=nil{return i,e};i.LatestVersion=strings.TrimPrefix(r.TagName,"v");i.ReleaseURL=r.HTMLURL;i.Available=compareSemver(i.LatestVersion,current)>0;if i.Available{i.Message="Доступна новая стабильная версия"}else{i.Message="Установлена последняя стабильная версия"};return i,nil}
-func downloadVerifiedInstaller(ctx context.Context,r stableRelease)(string,error){var u,s string;for _,a:=range r.Assets{if a.Name=="PrivateVPN-Next-Setup.exe"{u=a.URL};if a.Name=="SHA256SUMS.txt"{s=a.URL}};if u==""||s==""{return "",errors.New("в релизе отсутствует установщик или SHA256SUMS.txt")};sumFile,e:=fetchReleaseAsset(ctx,s,64<<10);if e!=nil{return "",e};expected,e:=checksumFor(string(sumFile),"PrivateVPN-Next-Setup.exe");if e!=nil{return "",e};data,e:=fetchReleaseAsset(ctx,u,1<<30);if e!=nil{return "",e};sum:=sha256.Sum256(data);if !strings.EqualFold(hex.EncodeToString(sum[:]),expected){return "",errors.New("SHA-256 установщика не совпадает")};d:=filepath.Join(appDataDir(),"updates");if e=os.MkdirAll(d,0700);e!=nil{return "",e};p:=filepath.Join(d,"PrivateVPN-Next-Setup.exe");tmp:=p+".download";if e=os.WriteFile(tmp,data,0700);e!=nil{return "",e};if e=os.Rename(tmp,p);e!=nil{_ = os.Remove(tmp);return "",e};return p,nil}
+func downloadVerifiedInstaller(ctx context.Context,r stableRelease,progress func(int64,int64))(string,error){
+ var u,s string
+ for _,a:=range r.Assets{if a.Name=="PrivateVPN-Next-Setup.exe"{u=a.URL};if a.Name=="SHA256SUMS.txt"{s=a.URL}}
+ if u==""||s==""{return "",errors.New("в релизе отсутствует установщик или SHA256SUMS.txt")}
+ sumFile,e:=fetchReleaseAsset(ctx,s,64<<10);if e!=nil{return "",e}
+ expected,e:=checksumFor(string(sumFile),"PrivateVPN-Next-Setup.exe");if e!=nil{return "",e}
+ req,e:=http.NewRequestWithContext(ctx,http.MethodGet,u,nil);if e!=nil{return "",e};req.Header.Set("Accept","application/octet-stream")
+ resp,e:=updateHTTPClient.Do(req);if e!=nil{return "",e};defer resp.Body.Close()
+ if resp.StatusCode!=http.StatusOK{return "",fmt.Errorf("загрузка вернула HTTP %d",resp.StatusCode)}
+ if resp.ContentLength>1<<30{return "",errors.New("файл превышает допустимый размер")}
+ d:=filepath.Join(appDataDir(),"updates");if e=os.MkdirAll(d,0700);e!=nil{return "",e}
+ p:=filepath.Join(d,"PrivateVPN-Next-Setup.exe");tmp:=p+".download";f,e:=os.OpenFile(tmp,os.O_CREATE|os.O_TRUNC|os.O_WRONLY,0700);if e!=nil{return "",e}
+ h:=sha256.New();buf:=make([]byte,128<<10);var done int64
+ for {n,readErr:=resp.Body.Read(buf);if n>0{if _,e=f.Write(buf[:n]);e!=nil{f.Close();os.Remove(tmp);return "",e};h.Write(buf[:n]);done+=int64(n);if progress!=nil{progress(done,resp.ContentLength)};if done>1<<30{f.Close();os.Remove(tmp);return "",errors.New("файл превышает допустимый размер")}};if readErr==io.EOF{break};if readErr!=nil{f.Close();os.Remove(tmp);return "",readErr}}
+ if e=f.Close();e!=nil{os.Remove(tmp);return "",e}
+ if resp.ContentLength>0&&done!=resp.ContentLength{os.Remove(tmp);return "",errors.New("загрузка установщика завершилась не полностью")}
+ if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)),expected){os.Remove(tmp);return "",errors.New("SHA-256 установщика не совпадает")}
+ if e=os.Rename(tmp,p);e!=nil{os.Remove(tmp);return "",e};return p,nil
+}
 func fetchReleaseAsset(ctx context.Context,u string,max int64)([]byte,error){q,e:=http.NewRequestWithContext(ctx,http.MethodGet,u,nil);if e!=nil{return nil,e};q.Header.Set("Accept","application/octet-stream");r,e:=updateHTTPClient.Do(q);if e!=nil{return nil,e};defer r.Body.Close();if r.StatusCode!=200{return nil,fmt.Errorf("загрузка вернула HTTP %d",r.StatusCode)};b,e:=io.ReadAll(io.LimitReader(r.Body,max+1));if e==nil&&int64(len(b))>max{e=errors.New("файл превышает допустимый размер")};return b,e}
 func checksumFor(c,n string)(string,error){for _,l:=range strings.Split(c,"\n"){f:=strings.Fields(l);if len(f)>=2&&strings.TrimPrefix(f[len(f)-1],"*")==n&&len(f[0])==64{if _,e:=hex.DecodeString(f[0]);e==nil{return strings.ToLower(f[0]),nil}}};return "",fmt.Errorf("SHA-256 для %s не найдена",n)}
 func compareSemver(a,b string)int{p:=func(s string)[3]int{var x[3]int;z:=strings.Split(strings.TrimPrefix(strings.TrimSpace(s),"v"),".");for i:=0;i<len(z)&&i<3;i++{_,_=fmt.Sscanf(z[i],"%d",&x[i])};return x};x,y:=p(a),p(b);for i:=range x{if x[i]>y[i]{return 1};if x[i]<y[i]{return -1}};return 0}
