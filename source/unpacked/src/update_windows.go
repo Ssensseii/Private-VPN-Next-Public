@@ -44,11 +44,23 @@ func prepareRollback(dir,version string)error{
  b,_:=json.MarshalIndent(rollbackState{InstallDir:dir,CreatedAt:time.Now(),FromVersion:version},"","  ")
  return os.WriteFile(rollbackStatePath(),b,0600)
 }
-func launchUpdateAfterExit(installer,installDir string)error{
- backup:=rollbackDir()
- script:=filepath.Join(appDataDir(),"updates","install-update.cmd")
- body:=fmt.Sprintf("@echo off\r\nsetlocal\r\n:waitapp\r\ntasklist /FI \"IMAGENAME eq PrivateVPN-Next.exe\" 2>NUL | find /I \"PrivateVPN-Next.exe\" >NUL\r\nif not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto waitapp)\r\nrobocopy \"%s\" \"%s\" /MIR /R:2 /W:1 >NUL\r\nif errorlevel 8 exit /b 21\r\nstart /wait \"\" \"%s\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /DIR=\"%s\"\r\nexit /b %%errorlevel%%\r\n",installDir,backup,installer,installDir)
- if e:=os.WriteFile(script,[]byte(body),0600);e!=nil{return e}
- return exec.Command("cmd.exe","/c","start","",script).Start()
+func updateLockPath() string {
+	return filepath.Join(appDataDir(), "updates", "install.lock")
 }
+
+func updateLockExists() bool {
+	_, err := os.Stat(updateLockPath())
+	return err == nil
+}
+
+func launchUpdateAfterExit(installer, installDir string) error {
+	backup := rollbackDir()
+	script := filepath.Join(appDataDir(), "updates", "install-update.cmd")
+	lock := updateLockPath()
+	appExe := filepath.Join(installDir, "PrivateVPN-Next.exe")
+	body := fmt.Sprintf("@echo off\r\nsetlocal\r\n>\"%s\" echo installing\r\n:waitapp\r\ntasklist /FI \"IMAGENAME eq PrivateVPN-Next.exe\" 2>NUL | find /I \"PrivateVPN-Next.exe\" >NUL\r\nif not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto waitapp)\r\nrobocopy \"%s\" \"%s\" /MIR /R:2 /W:1 >NUL\r\nif errorlevel 8 goto installfailed\r\nstart /wait \"\" \"%s\" /NORESTART /CLOSEAPPLICATIONS /DIR=\"%s\"\r\nset \"INSTALL_RESULT=%%errorlevel%%\"\r\ndel /q \"%s\" 2>NUL\r\nstart \"\" \"%s\"\r\nexit /b %%INSTALL_RESULT%%\r\n:installfailed\r\ndel /q \"%s\" 2>NUL\r\nstart \"\" \"%s\"\r\nexit /b 21\r\n", lock, installDir, backup, installer, installDir, lock, appExe, lock, appExe)
+	if err := os.WriteFile(script, []byte(body), 0600); err != nil { return err }
+	return exec.Command("cmd.exe", "/c", "start", "", script).Start()
+}
+
 func launchRollback()error{b,e:=os.ReadFile(rollbackStatePath());if e!=nil{return errors.New("резервная копия предыдущей версии не найдена")};var s rollbackState;if e=json.Unmarshal(b,&s);e!=nil{return e};if !fileExists(filepath.Join(rollbackDir(),"PrivateVPN-Next.exe")){return errors.New("резервная копия повреждена")};script:=filepath.Join(appDataDir(),"rollback","restore.cmd");body:=fmt.Sprintf("@echo off\r\n:wait\r\ntasklist /FI \"IMAGENAME eq PrivateVPN-Next.exe\" 2>NUL | find /I \"PrivateVPN-Next.exe\" >NUL\r\nif not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto wait)\r\nrobocopy \"%s\" \"%s\" /MIR /R:2 /W:1 >NUL\r\nif errorlevel 8 exit /b 22\r\nstart \"\" \"%s\"\r\ndel /q \"%s\" 2>NUL\r\nrmdir /s /q \"%s\" 2>NUL\r\n",rollbackDir(),s.InstallDir,filepath.Join(s.InstallDir,"PrivateVPN-Next.exe"),rollbackStatePath(),rollbackDir());if e=os.WriteFile(script,[]byte(body),0600);e!=nil{return e};return exec.Command("cmd.exe","/c","start","",script).Start()}

@@ -959,7 +959,7 @@ button:not(:disabled):active{transform:translateY(1px) scale(.99)}
      <div class="maintenance-copy"><b>Стабильные версии</b><span>Проверяются только релизы, опубликованные после ручного подтверждения владельца проекта. Тестовые сборки не предлагаются.</span></div>
      <div class="maintenance-actions"><button class="secondary-button" onclick="checkForUpdates()">Проверить обновления</button><button id="update-install" class="primary-button" style="display:none" onclick="downloadAndInstallUpdate()">Скачать и установить</button><button id="update-rollback" class="secondary-button" onclick="rollbackVersion()" disabled title="Сначала установите обновление">Откатить обновление</button></div>
      <div id="update-status" class="helper" aria-live="polite">Проверка выполняется вручную по запросу. Перед установкой или откатом VPN необходимо отключить.</div>
-     <div id="update-progress-wrap" class="update-progress-wrap" hidden><div class="update-progress"><i id="update-progress-bar"></i></div><div class="update-progress-label"><span id="update-progress-stage">Подготовка загрузки</span><b id="update-progress-percent">0%</b></div></div>
+     <div id="update-progress-wrap" class="update-progress-wrap" hidden><div class="update-progress"><i id="update-progress-bar"></i></div><div class="update-progress-label"><span id="update-progress-stage">Подготовка загрузки</span><span id="update-progress-time">Прошло: 00:00</span><b id="update-progress-percent">0%</b></div></div>
     </div>
     <div class="card form-card maintenance-card">
      <div class="section-label">Диагностика и обслуживание</div>
@@ -1075,6 +1075,7 @@ async function checkForUpdates(){
  }catch(e){el.textContent='Не удалось проверить обновления: '+e.message}
 }
 async function downloadAndInstallUpdate(){
+ window.__updateStartedAt=Date.now();
  const el=$('update-status');if(!confirm('Скачать проверенный установщик и установить обновление? VPN-туннель должен быть отключён.'))return;
  $('update-install').disabled=true;$('update-progress-wrap').hidden=false;el.textContent='Загружаю установщик и проверяю SHA-256…';
  try{const r=await api('downloadUpdate');if(r&&r.error)throw new Error(r.error);el.textContent=(r&&r.message)||'Установщик запущен.';}
@@ -1157,7 +1158,7 @@ function setStatus(st){
  $('connectBtn').disabled=updateBusy||st.state==='connecting';
  $('miniToggle').disabled=updateBusy||st.state==='connecting';
  $('update-progress-wrap').hidden=!updateBusy;
- if(updateBusy){const p=Math.max(0,Math.min(100,st.updateProgress||0));$('update-progress-bar').style.width=p+'%';$('update-progress-percent').textContent=p+'%';$('update-progress-stage').textContent=st.updateStage||'Обновление';$('update-status').textContent='Выполняется обновление. Не закрывайте приложение.';}app.classList.remove('state-off','state-connecting','state-on');app.classList.add('state-'+st.state);
+ if(updateBusy){if(!window.__updateStartedAt)window.__updateStartedAt=Date.now();const p=Math.max(0,Math.min(100,st.updateProgress||0));$('update-progress-bar').style.width=p+'%';$('update-progress-percent').textContent=p+'%';$('update-progress-stage').textContent=st.updateStage||'Обновление';const sec=Math.floor((Date.now()-window.__updateStartedAt)/1000);$('update-progress-time').textContent='Прошло: '+String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');$('update-status').textContent='Выполняется обновление. VPN-туннель заблокирован.';}else{window.__updateStartedAt=0;}app.classList.remove('state-off','state-connecting','state-on');app.classList.add('state-'+st.state);
  app.classList.toggle('locked',st.state!=='off');
  const on=st.state==='on',busy=st.state==='connecting';
  $('status').textContent=on?'Подключено':busy?(st.stopping?'Отключение…':'Подключение…'):'Не защищено';
