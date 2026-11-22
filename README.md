@@ -6,8 +6,8 @@
 
 ## Установка
 
-1. Открой [Releases](https://github.com/Ssensseii/Private-VPN-next/releases).
-2. Скачай `PrivateVPN-Next-Setup.exe` из последнего prerelease.
+1. Открой [Releases](https://github.com/Ssensseii/Private-VPN-Next-Public/releases).
+2. Скачай `PrivateVPN-Next-Setup.exe` из последнего стабильного релиза.
 3. Запусти установщик от имени администратора.
 4. Ярлык на рабочем столе отмечен по умолчанию; его можно отключить в установщике.
 5. При необходимости установи Microsoft Edge WebView2 Runtime:
@@ -55,7 +55,8 @@
 ## Проверка
 
 GitHub Actions выполняет Go-тесты, статический анализ, проверку конфигураций sing-box,
-сборку Windows x64 и публикацию prerelease. CI не заменяет проверку TUN,
+сборку Windows x64 и публикацию стабильного релиза с установщиком `PrivateVPN-Next-Setup.exe`,
+portable ZIP и `SHA256SUMS.txt`. CI не заменяет проверку TUN,
 маршрутизации IPv4/IPv6, обхода приложений и поведения Proxy6 на реальной Windows 10.
 
 [GitHub Actions](https://github.com/Ssensseii/Private-VPN-next/actions) ·
