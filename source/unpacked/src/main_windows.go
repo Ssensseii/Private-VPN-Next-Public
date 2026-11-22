@@ -412,7 +412,7 @@ func (a *app) ping() {
 	a.rtt = 0
 	a.mu.Unlock()
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), pingMeasurementDuration+2*time.Second)
 		defer cancel()
 		probeSettings, ok := a.core.ProbeSettings()
 		var rtt time.Duration
@@ -420,7 +420,7 @@ func (a *app) ping() {
 		if !ok {
 			err = errors.New("активный маршрут прокси недоступен")
 		} else {
-			rtt, err = measureProxyRTT(ctx, probeSettings, proxyProbeTargets)
+			rtt, err = measureProxyRTTWindow(ctx, probeSettings, proxyProbeTargets, pingMeasurementDuration)
 		}
 		a.mu.Lock()
 		a.pinging = false
@@ -436,8 +436,8 @@ func (a *app) ping() {
 			return
 		}
 		ms := rtt.Milliseconds()
-		a.addLog(fmt.Sprintf("Задержка через прокси: %d мс (медиана трёх TCP CONNECT)", ms))
-		a.setToast("Проверка завершена", fmt.Sprintf("Задержка через прокси: %d мс", ms), true)
+		a.addLog(fmt.Sprintf("Измерение пинга за 10 секунд завершено: медиана %d мс", ms))
+		a.setToast("Измерение завершено", fmt.Sprintf("Пинг за 10 секунд: %d мс", ms), true)
 	}()
 }
 
