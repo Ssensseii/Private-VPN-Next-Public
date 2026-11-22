@@ -32,6 +32,11 @@ type toastState struct {
 	Text  string `json:"text"`
 	OK    bool   `json:"ok"`
 }
+type pingSample struct {
+	MS int64 `json:"ms"`
+	OK bool `json:"ok"`
+	Time int64 `json:"time"`
+}
 type uiState struct {
 	Updating bool `json:"updating"`
 	UpdateProgress int `json:"updateProgress"`
@@ -46,6 +51,8 @@ type uiState struct {
 	Pinging   bool        `json:"pinging"`
 	Step      string      `json:"step"`
 	Settings  Settings    `json:"settings"`
+	PingHistory []pingSample `json:"pingHistory"`
+	AutoPingEnabled bool `json:"autoPingEnabled"`
 	Log       []string    `json:"log"`
 	Toast     *toastState `json:"toast,omitempty"`
 }
@@ -79,6 +86,9 @@ type app struct {
 	latency     int64
 	rtt         int64
 	pinging     bool
+	pingHistory []pingSample
+	autoPingEnabled bool
+	autoPingConfigured bool
 	updating bool
 	updateProgress int
 	updateStage string
@@ -106,7 +116,7 @@ func runApp() error {
 	if err != nil {
 		return err
 	}
-	a := &app{exeDir: filepath.Dir(exe), settings: LoadSettings(), state: "off"}
+	a := &app{exeDir: filepath.Dir(exe), settings: LoadSettings(), state: "off", autoPingEnabled: true}
 	if updateLockExists() { a.updating = true; a.updateProgress = 100; a.updateStage = "Установка обновления — дождитесь завершения мастера" }
 	coreExe := filepath.Join(a.exeDir, "core", "sing-box.exe")
 	a.core = NewCore(filepath.Join(a.exeDir, "core"), a.addLog, a.coreDied)
@@ -138,6 +148,8 @@ func runApp() error {
 		return err
 	}
 	defer a.server.Close()
+	a.loadPingHistory()
+	go a.autoPingLoop()
 	return a.runWebView()
 }
 
@@ -224,7 +236,7 @@ func (a *app) snapshot() uiState {
 	toast := a.toast
 	a.toast = nil
 	if updateLockExists() { a.updating = true; if a.updateProgress < 100 { a.updateProgress = 100 }; a.updateStage = "Установка обновления — дождитесь завершения мастера" } else if a.updateStage == "Установка обновления — дождитесь завершения мастера" { a.updating = false; a.updateProgress = 0; a.updateStage = "" }
-	return uiState{State:a.state,Stopping:a.stopping,Since:a.since,IP:a.ip,Latency:a.latency,RTT:a.rtt,Pinging:a.pinging,Step:a.step,Updating:a.updating,UpdateProgress:a.updateProgress,UpdateStage:a.updateStage,Settings:a.settings,Log:logs,Toast:toast}
+	return uiState{State:a.state,Stopping:a.stopping,Since:a.since,IP:a.ip,Latency:a.latency,RTT:a.rtt,Pinging:a.pinging,Step:a.step,Updating:a.updating,UpdateProgress:a.updateProgress,UpdateStage:a.updateStage,Settings:a.settings,PingHistory:append([]pingSample(nil),a.pingHistory...),AutoPingEnabled:a.autoPingEnabled,Log:logs,Toast:toast}
 }
 
 func isExistingTunInterfaceError(err error) bool {
@@ -403,10 +415,12 @@ func (a *app) checkExternalIP() {
 	a.addLog("Внешний IP: " + ip)
 }
 
-func (a *app) ping() {
+func (a *app) ping() { a.runPing(false) }
+
+func (a *app) runPing(automatic bool) {
 	a.reconcileCoreState()
 	a.mu.Lock()
-	if a.state != "on" || a.pinging {
+	if a.state != "on" || a.pinging || a.updating || updateLockExists() {
 		a.mu.Unlock()
 		return
 	}
@@ -414,33 +428,87 @@ func (a *app) ping() {
 	a.rtt = 0
 	a.mu.Unlock()
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), pingMeasurementDuration+2*time.Second)
-		defer cancel()
 		probeSettings, ok := a.core.ProbeSettings()
 		var rtt time.Duration
 		var err error
 		if !ok {
 			err = errors.New("активный маршрут прокси недоступен")
+		} else if automatic {
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			rtt, err = measureProxyRTT(ctx, probeSettings, proxyProbeTargets)
+			cancel()
 		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), pingMeasurementDuration+2*time.Second)
 			rtt, err = measureProxyRTTWindow(ctx, probeSettings, proxyProbeTargets, pingMeasurementDuration)
+			cancel()
 		}
 		a.mu.Lock()
 		a.pinging = false
-		if err == nil {
-			a.rtt = rtt.Milliseconds()
-		} else {
-			a.rtt = 0
-		}
+		if err == nil { a.rtt = rtt.Milliseconds() } else { a.rtt = 0 }
 		a.mu.Unlock()
+		a.recordPingSample(rtt.Milliseconds(), err == nil)
 		if err != nil {
-			a.addLog("Проверка TCP CONNECT не удалась: " + err.Error())
-			a.setToast("Проверка не удалась", "Прокси не установил удалённое TCP-соединение: "+err.Error(), false)
+			if automatic { a.addLog("Автоматическое измерение пинга: "+err.Error())
+			} else {
+				a.addLog("Проверка TCP CONNECT не удалась: "+err.Error())
+				a.setToast("Проверка не удалась", "Прокси не установил удалённое TCP-соединение: "+err.Error(), false)
+			}
 			return
 		}
 		ms := rtt.Milliseconds()
-		a.addLog(fmt.Sprintf("Измерение пинга за 10 секунд завершено: медиана %d мс", ms))
-		a.setToast("Измерение завершено", fmt.Sprintf("Пинг за 10 секунд: %d мс", ms), true)
+		if automatic {
+			a.addLog(fmt.Sprintf("Автоматический пинг: %d мс", ms))
+		} else {
+			a.addLog(fmt.Sprintf("Измерение пинга за 10 секунд завершено: медиана %d мс", ms))
+			a.setToast("Измерение завершено", fmt.Sprintf("Пинг за 10 секунд: %d мс", ms), true)
+		}
 	}()
+}
+
+func (a *app) autoPingLoop() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	var last time.Time
+	for range ticker.C {
+		a.mu.Lock()
+		enabled := a.autoPingConfigured && a.autoPingEnabled
+		connected := a.state == "on"
+		busy := a.pinging || a.updating
+		a.mu.Unlock()
+		if !enabled || !connected { last = time.Time{}; continue }
+		if !busy && (last.IsZero() || time.Since(last) >= 10*time.Second) {
+			last = time.Now()
+			a.runPing(true)
+		}
+	}
+}
+
+func (a *app) loadPingHistory() {
+	b, err := os.ReadFile(filepath.Join(appDataDir(), "ping-history.json"))
+	if err != nil { return }
+	var samples []pingSample
+	if json.Unmarshal(b, &samples) == nil {
+		if len(samples) > 1200 { samples = samples[len(samples)-1200:] }
+		a.pingHistory = samples
+	}
+}
+
+func (a *app) recordPingSample(ms int64, ok bool) {
+	sample := pingSample{MS:ms, OK:ok, Time:time.Now().UnixMilli()}
+	a.mu.Lock()
+	a.pingHistory = append(a.pingHistory, sample)
+	if len(a.pingHistory) > 1200 { a.pingHistory = append([]pingSample(nil), a.pingHistory[len(a.pingHistory)-1200:]...) }
+	copyHistory := append([]pingSample(nil), a.pingHistory...)
+	a.mu.Unlock()
+	if err := os.MkdirAll(appDataDir(), 0700); err != nil { a.addLog("Не удалось сохранить историю пинга: "+err.Error()); return }
+	b, err := json.Marshal(copyHistory)
+	if err == nil {
+		path := filepath.Join(appDataDir(), "ping-history.json")
+		tmp := path+".tmp"
+		err = os.WriteFile(tmp, b, 0600)
+		if err == nil { err = os.Rename(tmp, path) }
+	}
+	if err != nil { a.addLog("Не удалось сохранить историю пинга: "+err.Error()) }
 }
 
 func (a *app) saveTheme(theme string) string {
@@ -541,6 +609,7 @@ window.vpn_deleteProfile=id=>vpnCall('deleteProfile',[id]);
 window.vpn_toggle=()=>vpnCall('toggle');
 window.vpn_showMini=()=>vpnCall('showMini');
 window.vpn_ping=()=>vpnCall('ping');
+window.vpn_setAutoPing=enabled=>vpnCall('setAutoPing',[enabled]);
 window.vpn_saveSettings=s=>vpnCall('saveSettings',[s]);
 window.vpn_saveTheme=theme=>vpnCall('saveTheme',[theme]);
 window.vpn_parseLink=t=>vpnCall('parseLink',[t||'']);
@@ -617,6 +686,12 @@ func (a *app) handleAPI(w http.ResponseWriter, r *http.Request) {
 	case "ping":
 		a.ping()
 		writeJSON(w, nil)
+	case "setAutoPing":
+		var enabled bool
+		if len(args)==0 || json.Unmarshal(args[0], &enabled)!=nil { writeJSON(w, map[string]string{"error":"Не задано состояние автоматического измерения"}); return }
+		a.mu.Lock(); a.autoPingEnabled=enabled; a.autoPingConfigured=true; a.mu.Unlock()
+		a.addLog(map[bool]string{true:"Автоматическое измерение пинга включено",false:"Автоматическое измерение пинга отключено"}[enabled])
+		writeJSON(w, map[string]bool{"enabled":enabled})
 	case "saveTheme":
 		var theme string
 		if len(args) == 0 || json.Unmarshal(args[0], &theme) != nil {
