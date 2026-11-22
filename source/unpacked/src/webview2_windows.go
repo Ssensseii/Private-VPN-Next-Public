@@ -58,6 +58,7 @@ const (
 	wmCommand                               = 0x0111
 	wmApp                                   = 0x8000
 	wmRestoreMain                           = wmApp + 2
+	wmShowMini                              = wmApp + 3
 	wmTrayCallback                          = wmApp + 1
 	wmLButtonUp                             = 0x0202
 	wmRButtonUp                             = 0x0205
@@ -259,6 +260,9 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmRestoreMain:
 		a.show()
 		return 0
+	case wmShowMini:
+		a.showMini()
+		return 0
 	case wmCommand:
 		switch uint32(wParam & 0xffff) {
 		case idTrayToggle:
@@ -301,7 +305,7 @@ func (a *app) showMini() {
 	a.reconcileCoreState()
 	if a.hwnd != 0 {
 		pShowWindow.Call(a.hwnd, swShow)
-		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 430, 590, swpNoMove|swpNoZOrder|swpShowWindow)
+		pSetWindowPos.Call(a.hwnd, 0, 0, 0, 560, 620, swpNoMove|swpNoZOrder|swpShowWindow)
 		pSetForegroundWindow.Call(a.hwnd)
 		updateWebViewBounds(a)
 		a.executeScript("window.openMiniPanel&&window.openMiniPanel();window.vpn_ready&&window.vpn_ready()")
