@@ -1,4 +1,5 @@
 name: Build and verify Windows installer
+# Stable release publication is performed only after the Windows artifact passes SHA-256 verification.
 
 on:
   push:
